@@ -1,0 +1,29 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://demo/scripts/agent_server.gd" id="1_srv"]
+
+[sub_resource type="CapsuleShape3D" id="DroneCol"]
+radius = 0.18
+height = 0.36
+
+[sub_resource type="WorldBoundaryShape3D" id="GroundCol"]
+
+[node name="AgentWorld" type="Node3D"]
+
+[node name="DroneBody" type="DroneBody" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+n_rotors = 4
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DroneBody"]
+shape = SubResource("DroneCol")
+
+[node name="Ground" type="StaticBody3D" parent="."]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Ground"]
+shape = SubResource("GroundCol")
+
+[node name="AgentServer" type="Node" parent="."]
+script = ExtResource("1_srv")
+drone_path = NodePath("../DroneBody")
+port = 5557
+physics_hz = 400

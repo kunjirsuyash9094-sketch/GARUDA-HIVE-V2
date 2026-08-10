@@ -1,0 +1,187 @@
+[gd_scene load_steps=18 format=3]
+
+[ext_resource type="Script" path="res://demo/scripts/drone_controller.gd" id="1_ctrl"]
+[ext_resource type="Script" path="res://demo/scripts/chase_camera.gd" id="2_cam"]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMat"]
+
+[sub_resource type="Sky" id="Sky"]
+sky_material = SubResource("SkyMat")
+
+[sub_resource type="Environment" id="Env"]
+background_mode = 2
+sky = SubResource("Sky")
+ambient_light_source = 3
+tonemap_mode = 2
+
+[sub_resource type="CapsuleShape3D" id="DroneCol"]
+radius = 0.18
+height = 0.36
+
+[sub_resource type="PlaneMesh" id="GroundMesh"]
+size = Vector2(400, 400)
+
+[sub_resource type="StandardMaterial3D" id="mat_ground"]
+albedo_color = Color(0.21, 0.24, 0.27, 1)
+roughness = 0.95
+
+[sub_resource type="WorldBoundaryShape3D" id="GroundCol"]
+
+[sub_resource type="BoxMesh" id="BodyMesh"]
+size = Vector3(0.26, 0.08, 0.26)
+
+[sub_resource type="StandardMaterial3D" id="mat_dark"]
+albedo_color = Color(0.11, 0.12, 0.14, 1)
+metallic = 0.2
+roughness = 0.55
+
+[sub_resource type="BoxMesh" id="ArmMesh"]
+size = Vector3(0.58, 0.03, 0.05)
+
+[sub_resource type="CylinderMesh" id="RotorMesh"]
+top_radius = 0.13
+bottom_radius = 0.13
+height = 0.02
+
+[sub_resource type="StandardMaterial3D" id="mat_front"]
+albedo_color = Color(0.86, 0.22, 0.2, 1)
+
+[sub_resource type="StandardMaterial3D" id="mat_back"]
+albedo_color = Color(0.82, 0.84, 0.87, 1)
+
+[sub_resource type="BoxMesh" id="PillarMesh"]
+size = Vector3(1, 6, 1)
+
+[sub_resource type="StandardMaterial3D" id="mat_pillar"]
+albedo_color = Color(0.29, 0.4, 0.5, 1)
+
+[node name="FreeFlight" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.5, -0.866, 0, 0.866, 0.5, 0, 10, 0)
+shadow_enabled = true
+
+[node name="Ground" type="StaticBody3D" parent="."]
+
+[node name="Mesh" type="MeshInstance3D" parent="Ground"]
+mesh = SubResource("GroundMesh")
+material_override = SubResource("mat_ground")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Ground"]
+shape = SubResource("GroundCol")
+
+[node name="Landmarks" type="Node3D" parent="."]
+
+[node name="P1" type="MeshInstance3D" parent="Landmarks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 3, -8)
+mesh = SubResource("PillarMesh")
+material_override = SubResource("mat_pillar")
+
+[node name="P2" type="MeshInstance3D" parent="Landmarks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9, 3, -11)
+mesh = SubResource("PillarMesh")
+material_override = SubResource("mat_pillar")
+
+[node name="P3" type="MeshInstance3D" parent="Landmarks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13, 3, 5)
+mesh = SubResource("PillarMesh")
+material_override = SubResource("mat_pillar")
+
+[node name="P4" type="MeshInstance3D" parent="Landmarks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 3, 6)
+mesh = SubResource("PillarMesh")
+material_override = SubResource("mat_pillar")
+
+[node name="DroneBody" type="DroneBody" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+n_rotors = 4
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DroneBody"]
+shape = SubResource("DroneCol")
+
+[node name="Body" type="MeshInstance3D" parent="DroneBody"]
+mesh = SubResource("BodyMesh")
+material_override = SubResource("mat_dark")
+
+[node name="ArmX" type="MeshInstance3D" parent="DroneBody"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 0)
+mesh = SubResource("ArmMesh")
+material_override = SubResource("mat_dark")
+
+[node name="ArmZ" type="MeshInstance3D" parent="DroneBody"]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 0, 0.02, 0)
+mesh = SubResource("ArmMesh")
+material_override = SubResource("mat_dark")
+
+[node name="RotorF" type="MeshInstance3D" parent="DroneBody"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.06, -0.28)
+mesh = SubResource("RotorMesh")
+material_override = SubResource("mat_front")
+
+[node name="RotorB" type="MeshInstance3D" parent="DroneBody"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.06, 0.28)
+mesh = SubResource("RotorMesh")
+material_override = SubResource("mat_back")
+
+[node name="RotorR" type="MeshInstance3D" parent="DroneBody"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.28, 0.06, 0)
+mesh = SubResource("RotorMesh")
+material_override = SubResource("mat_back")
+
+[node name="RotorL" type="MeshInstance3D" parent="DroneBody"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.28, 0.06, 0)
+mesh = SubResource("RotorMesh")
+material_override = SubResource("mat_back")
+
+[node name="ChaseCamera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6, 12)
+current = true
+script = ExtResource("2_cam")
+target_path = NodePath("../DroneBody")
+
+[node name="Controller" type="Node" parent="."]
+script = ExtResource("1_ctrl")
+drone_path = NodePath("../DroneBody")
+hud_path = NodePath("../HUD/Telemetry")
+physics_hz = 400
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="TelemBG" type="ColorRect" parent="HUD"]
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 486.0
+offset_bottom = 206.0
+color = Color(0, 0, 0, 0.45)
+
+[node name="Telemetry" type="RichTextLabel" parent="HUD"]
+bbcode_enabled = true
+fit_content = true
+offset_left = 18.0
+offset_top = 16.0
+offset_right = 478.0
+offset_bottom = 200.0
+
+[node name="HelpBG" type="ColorRect" parent="HUD"]
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = -104.0
+offset_right = 560.0
+offset_bottom = -8.0
+color = Color(0, 0, 0, 0.45)
+
+[node name="Help" type="Label" parent="HUD"]
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 18.0
+offset_top = -96.0
+offset_right = 552.0
+offset_bottom = -16.0
+text = "ENTER  arm        BACKSPACE  disarm
+W / S   throttle    A / D   yaw
+↑ / ↓   pitch       ← / →   roll
+(Xbox / PS gamepad also supported)"

@@ -1,0 +1,22 @@
+[configuration]
+entry_symbol = "drone_sim_init"
+compatibility_minimum = "4.2"
+
+[libraries]
+windows.release.x86_64 = "bin/drone_sim.windows.release.x86_64.dll"
+windows.debug.x86_64   = "bin/drone_sim.windows.debug.x86_64.dll"
+windows.release.arm64  = "bin/drone_sim.windows.release.arm64.dll"
+windows.debug.arm64    = "bin/drone_sim.windows.debug.arm64.dll"
+
+linux.release.x86_64   = "bin/libdrone_sim.linux.release.x86_64.so"
+linux.debug.x86_64     = "bin/libdrone_sim.linux.debug.x86_64.so"
+linux.release.arm64    = "bin/libdrone_sim.linux.release.arm64.so"
+linux.debug.arm64      = "bin/libdrone_sim.linux.debug.arm64.so"
+
+# macOS ships a single universal (x86_64 + arm64) dylib.
+macos.release          = "bin/libdrone_sim.macos.release.universal.dylib"
+macos.debug            = "bin/libdrone_sim.macos.debug.universal.dylib"
+
+[icons]
+DroneBody = "icons/drone_body.svg"
+SITLManager = "icons/drone_body.svg"

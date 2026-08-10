@@ -1,0 +1,94 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://demo/scripts/agent_server.gd" id="srv"]
+[ext_resource type="Script" path="res://demo/scripts/perception.gd" id="perc"]
+
+[sub_resource type="CapsuleShape3D" id="DroneCol"]
+radius = 0.18
+height = 0.36
+
+[sub_resource type="WorldBoundaryShape3D" id="GroundCol"]
+
+[sub_resource type="PlaneMesh" id="GroundMesh"]
+size = Vector2(200, 200)
+
+[sub_resource type="BoxShape3D" id="ObsShape"]
+size = Vector3(2, 6, 2)
+
+[sub_resource type="BoxMesh" id="ObsMesh"]
+size = Vector3(2, 6, 2)
+
+[sub_resource type="StandardMaterial3D" id="ObsMat"]
+albedo_color = Color(0.55, 0.35, 0.3, 1)
+
+[node name="NavWorld" type="Node3D"]
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.5, -0.866, 0, 0.866, 0.5, 0, 10, 0)
+
+[node name="Ground" type="StaticBody3D" parent="." groups=["ground"]]
+
+[node name="Mesh" type="MeshInstance3D" parent="Ground"]
+mesh = SubResource("GroundMesh")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Ground"]
+shape = SubResource("GroundCol")
+
+[node name="Obstacles" type="Node3D" parent="."]
+
+[node name="O1" type="StaticBody3D" parent="Obstacles" groups=["obstacle"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 3, -8)
+[node name="C" type="CollisionShape3D" parent="Obstacles/O1"]
+shape = SubResource("ObsShape")
+[node name="M" type="MeshInstance3D" parent="Obstacles/O1"]
+mesh = SubResource("ObsMesh")
+material_override = SubResource("ObsMat")
+
+[node name="O2" type="StaticBody3D" parent="Obstacles" groups=["obstacle"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 3, -15)
+[node name="C" type="CollisionShape3D" parent="Obstacles/O2"]
+shape = SubResource("ObsShape")
+[node name="M" type="MeshInstance3D" parent="Obstacles/O2"]
+mesh = SubResource("ObsMesh")
+material_override = SubResource("ObsMat")
+
+[node name="O3" type="StaticBody3D" parent="Obstacles" groups=["obstacle"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 3, -23)
+[node name="C" type="CollisionShape3D" parent="Obstacles/O3"]
+shape = SubResource("ObsShape")
+[node name="M" type="MeshInstance3D" parent="Obstacles/O3"]
+mesh = SubResource("ObsMesh")
+material_override = SubResource("ObsMat")
+
+[node name="O4" type="StaticBody3D" parent="Obstacles" groups=["obstacle"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 3, -31)
+[node name="C" type="CollisionShape3D" parent="Obstacles/O4"]
+shape = SubResource("ObsShape")
+[node name="M" type="MeshInstance3D" parent="Obstacles/O4"]
+mesh = SubResource("ObsMesh")
+material_override = SubResource("ObsMat")
+
+[node name="Goal" type="Marker3D" parent="." groups=["goal"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, -40)
+
+[node name="DroneBody" type="DroneBody" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+n_rotors = 4
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DroneBody"]
+shape = SubResource("DroneCol")
+
+[node name="Perception" type="Node3D" parent="DroneBody"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.2)
+script = ExtResource("perc")
+depth_cols = 32
+depth_rows = 24
+enable_rgb = false
+
+[node name="AgentServer" type="Node" parent="."]
+script = ExtResource("srv")
+drone_path = NodePath("../DroneBody")
+perception_path = NodePath("../DroneBody/Perception")
+port = 5557
+physics_hz = 400
+camera_hz = 30
