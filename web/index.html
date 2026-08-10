@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SkySim — browser drone simulator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  :root { --bg:#0d1b2a; --fg:#e8eef5; --accent:#5fb4ff; --panel:rgba(10,20,32,.82); }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:ui-monospace,Menlo,Consolas,monospace; background:var(--bg); color:var(--fg); overflow:hidden; }
+  #view { position:fixed; inset:0; }
+  .panel { position:fixed; background:var(--panel); border:1px solid #23405e; border-radius:10px; padding:12px 14px; backdrop-filter:blur(4px); }
+  #hud { top:14px; left:14px; min-width:230px; line-height:1.5; font-size:13px; }
+  #hud b { color:var(--accent); }
+  #ctrl { top:14px; right:14px; width:360px; max-height:calc(100vh - 28px); overflow:auto; }
+  #ctrl h1 { font-size:15px; margin:0 0 8px; color:var(--accent); }
+  #ctrl .row { display:flex; gap:8px; margin:8px 0; }
+  button { background:#14324e; color:var(--fg); border:1px solid #2c5a86; border-radius:7px; padding:7px 12px; cursor:pointer; font-family:inherit; font-size:13px; }
+  button:hover { background:#1b4467; }
+  button.on { background:var(--accent); color:#04121f; border-color:var(--accent); }
+  textarea { width:100%; height:190px; background:#07131f; color:#cfe6ff; border:1px solid #23405e; border-radius:7px; padding:8px; font-family:inherit; font-size:12px; resize:vertical; }
+  .hint { font-size:11px; color:#8fa9c2; margin-top:6px; line-height:1.5; }
+  #banner { top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; display:none; }
+  a { color:var(--accent); }
+</style>
+</head>
+<body>
+<canvas id="view"></canvas>
+
+<div id="hud" class="panel">
+  <div><b>SkySim</b> · browser core</div>
+  <div>ALT <span id="alt">–</span> m &nbsp; VS <span id="vs">–</span> m/s</div>
+  <div>R <span id="r">–</span>° &nbsp; P <span id="p">–</span>° &nbsp; Y <span id="y">–</span>°</div>
+  <div>THRUST <span id="thr">–</span> N</div>
+  <div>MODE <span id="mode">keyboard</span> &nbsp; <span id="armed">DISARMED</span></div>
+</div>
+
+<div id="ctrl" class="panel">
+  <h1>Controls</h1>
+  <div class="row">
+    <button id="armBtn">Arm</button>
+    <button id="resetBtn">Reset</button>
+    <button id="kbBtn" class="on">Keyboard</button>
+    <button id="scriptBtn">Script</button>
+  </div>
+  <div class="hint">Keyboard: <b>W/S</b> throttle · <b>A/D</b> yaw · <b>arrows</b> pitch/roll</div>
+  <div style="margin-top:10px">Algorithm (JS) — return <code>[roll,pitch,yaw_rate,throttle]</code>:</div>
+  <textarea id="code">// obs = {pos:[x,y,z], vel:[..], euler:[roll,pitch,yaw], rates:[..], alt}
+// t = seconds. Return [roll, pitch, yaw_rate, throttle] (throttle 0..1).
+function control(obs, t) {
+  const target = 5.0;                     // hold 5 m
+  let thr = 0.33 + 0.15 * (target - obs.alt) - 0.05 * obs.vel[1];
+  return [0, 0, 0, Math.max(0, Math.min(1, thr))];
+}</textarea>
+  <div class="row"><button id="runBtn">Run script ▶</button></div>
+  <div class="hint" id="err" style="color:#ff8f8f"></div>
+  <div class="hint">Heavy ML? This client-side core is for classical control + light policies.
+  For PyTorch/GPU, connect the same algorithm to the native agent server (Phase 1).</div>
+</div>
+
+<div id="banner" class="panel">
+  <b>WASM core not found.</b><br/>Build it first:<br/><code>web/build_wasm.sh</code><br/>
+  (needs <a href="https://emscripten.org">Emscripten</a>), then serve <code>web/</code>.
+</div>
+
+<script src="skysim_core.js" onerror="document.getElementById('banner').style.display='block'"></script>
+<script>
+let core, api, obsPtr, motorsPtr;
+let mode = "keyboard", armed = false, running = false, userFn = null, t0 = 0;
+let kb = { throttle: 0.0 };
+const keys = {};
+
+// ---------- Three.js scene ----------
+const canvas = document.getElementById("view");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true });
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0d1b2a);
+scene.fog = new THREE.Fog(0x0d1b2a, 40, 160);
+const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
+scene.add(new THREE.HemisphereLight(0xbfd4ff, 0x0a141f, 1.1));
+const sun = new THREE.DirectionalLight(0xffffff, 1.0); sun.position.set(6,12,4); scene.add(sun);
+const grid = new THREE.GridHelper(400, 100, 0x2c5a86, 0x1a3350); scene.add(grid);
+
+function makeDrone() {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.3,0.09,0.3),
+                              new THREE.MeshStandardMaterial({color:0x1a1d22}));
+  g.add(body);
+  const arm = 0.28;
+  const spots = [[arm,-arm,0xd63838],[-arm,-arm,0xd63838],[arm,arm,0xd0d4d8],[-arm,arm,0xd0d4d8]];
+  for (const [x,z,c] of spots) {
+    const r = new THREE.Mesh(new THREE.CylinderGeometry(0.13,0.13,0.02,16),
+                             new THREE.MeshStandardMaterial({color:c}));
+    r.position.set(x,0.05,z); g.add(r);
+  }
+  return g;
+}
+const drone = makeDrone(); scene.add(drone);
+
+function resize() {
+  const w = window.innerWidth, h = window.innerHeight;
+  renderer.setSize(w,h); camera.aspect = w/h; camera.updateProjectionMatrix();
+}
+window.addEventListener("resize", resize); resize();
+
+// ---------- WASM binding ----------
+function bind(Module) {
+  api = {
+    create: Module.cwrap("skysim_create","number",[]),
+    reset:  Module.cwrap("skysim_reset",null,["number","number","number","number"]),
+    arm:    Module.cwrap("skysim_arm",null,["number","number"]),
+    setAtt: Module.cwrap("skysim_set_attitude",null,["number","number","number","number","number"]),
+    step:   Module.cwrap("skysim_step",null,["number","number"]),
+    getObs: Module.cwrap("skysim_get_obs",null,["number","number"]),
+    alt:  Module.cwrap("skysim_altitude","number",["number"]),
+    vs:   Module.cwrap("skysim_vspeed","number",["number"]),
+    thr:  Module.cwrap("skysim_thrust","number",["number"]),
+    roll: Module.cwrap("skysim_roll","number",["number"]),
+    pitch:Module.cwrap("skysim_pitch","number",["number"]),
+    yaw:  Module.cwrap("skysim_yaw","number",["number"]),
+  };
+  core = api.create();
+  obsPtr = Module._malloc(12*8);
+  Module.HEAPF64_ = Module.HEAPF64;
+  window._M = Module;
+  api.reset(core, 0, 2, 0);
+  t0 = performance.now()/1000;
+  loop();
+}
+if (window.SkySimCore) SkySimCore().then(bind);
+
+function readObs() {
+  api.getObs(core, obsPtr);
+  const h = window._M.HEAPF64.subarray(obsPtr/8, obsPtr/8 + 12);
+  return { pos:[h[0],h[1],h[2]], vel:[h[3],h[4],h[5]],
+           euler:[h[6],h[7],h[8]], rates:[h[9],h[10],h[11]], alt:h[1] };
+}
+
+// ---------- control each tick ----------
+function computeAction(obs, t) {
+  if (mode === "script" && userFn) {
+    try { const a = userFn(obs, t); return [a[0]||0, a[1]||0, a[2]||0, Math.max(0,Math.min(1,a[3]||0))]; }
+    catch(e){ document.getElementById("err").textContent = e.message; running=false; }
+  }
+  // keyboard
+  if (keys["w"]) kb.throttle = Math.min(1, kb.throttle + 0.01);
+  if (keys["s"]) kb.throttle = Math.max(0, kb.throttle - 0.01);
+  const roll  = (keys["arrowleft"]?-0.4:0) + (keys["arrowright"]?0.4:0);
+  const pitch = (keys["arrowup"]?-0.4:0) + (keys["arrowdown"]?0.4:0);
+  const yaw   = (keys["a"]?-1.5:0) + (keys["d"]?1.5:0);
+  return [roll, pitch, yaw, kb.throttle];
+}
+
+// ---------- main loop ----------
+const DT = 1/200; let acc = 0, last = 0;
+function loop() {
+  requestAnimationFrame(loop);
+  const now = performance.now()/1000;
+  if (!last) last = now;
+  acc += Math.min(now - last, 0.1); last = now;
+  while (acc >= DT) {
+    if (armed || mode==="script") {
+      const obs = readObs();
+      const [r,p,yw,th] = computeAction(obs, now - t0);
+      api.setAtt(core, r, p, yw, th);
+    }
+    api.step(core, DT);
+    acc -= DT;
+  }
+  const o = readObs();
+  drone.position.set(o.pos[0], o.pos[1], o.pos[2]);
+  drone.rotation.order = "YXZ";
+  drone.rotation.set(o.euler[1], o.euler[2], o.euler[0]);
+  // chase camera
+  const camPos = new THREE.Vector3(o.pos[0], o.pos[1]+4, o.pos[2]+11);
+  camera.position.lerp(camPos, 0.08);
+  camera.lookAt(o.pos[0], o.pos[1]+0.5, o.pos[2]);
+  // HUD
+  document.getElementById("alt").textContent = api.alt(core).toFixed(2);
+  document.getElementById("vs").textContent  = api.vs(core).toFixed(2);
+  document.getElementById("r").textContent   = api.roll(core).toFixed(1);
+  document.getElementById("p").textContent   = api.pitch(core).toFixed(1);
+  document.getElementById("y").textContent   = api.yaw(core).toFixed(1);
+  document.getElementById("thr").textContent = api.thr(core).toFixed(1);
+  renderer.render(scene, camera);
+}
+
+// ---------- UI ----------
+addEventListener("keydown", e => { keys[e.key.toLowerCase()] = true;
+  if (["arrowup","arrowdown","arrowleft","arrowright"].includes(e.key.toLowerCase())) e.preventDefault(); });
+addEventListener("keyup",   e => { keys[e.key.toLowerCase()] = false; });
+const $ = id => document.getElementById(id);
+$("armBtn").onclick = () => { armed = !armed; api.arm(core, armed?1:0);
+  $("armed").textContent = armed?"ARMED":"DISARMED"; $("armBtn").classList.toggle("on",armed); $("armBtn").textContent = armed?"Disarm":"Arm"; };
+$("resetBtn").onclick = () => { kb.throttle=0; api.reset(core,0,2,0); if(armed) api.arm(core,1); };
+$("kbBtn").onclick = () => { mode="keyboard"; running=false; $("mode").textContent="keyboard"; $("kbBtn").classList.add("on"); $("scriptBtn").classList.remove("on"); };
+$("scriptBtn").onclick = () => { mode="script"; $("mode").textContent="script"; $("scriptBtn").classList.add("on"); $("kbBtn").classList.remove("on"); };
+$("runBtn").onclick = () => {
+  $("err").textContent = "";
+  try { userFn = new Function("return (" + $("code").value + "\n; control)")(); mode="script";
+        $("mode").textContent="script"; $("scriptBtn").classList.add("on"); $("kbBtn").classList.remove("on");
+        api.reset(core,0,2,0); api.arm(core,1); armed=true; $("armed").textContent="ARMED"; }
+  catch(e){ $("err").textContent = e.message; }
+};
+</script>
+</body>
+</html>
