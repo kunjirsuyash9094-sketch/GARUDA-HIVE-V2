@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "skysim"
+version = "0.1.0"
+description = "Python client + Gymnasium env for the SkySim drone simulator"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+dependencies = [
+    "numpy>=1.23",
+    "gymnasium>=0.29",
+    "websocket-client>=1.6",
+]
+
+[project.optional-dependencies]
+rl = ["stable-baselines3>=2.0"]
+dev = ["websockets>=12", "pytest>=7"]
+
+[tool.setuptools.packages.find]
+include = ["skysim*"]
