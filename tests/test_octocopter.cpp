@@ -44,7 +44,7 @@ int main() {
     // Nominal mass: 10.0 kg (8.5 kg dry + 1.5 kg camera) -> Weight = 10.0 * 9.80665 = 98.0665 N
     // 8x 15" rotors with 380 KV on 6S LiPo (25.2V) produce ~280 N max thrust.
     // Calibrate steady-state hover throttle for 98.07 N:
-    double hover_thr = 0.355;
+    double hover_thr = 0.5833;
     for (int i = 0; i < 100; ++i) { // 0.25s (16.7 tau, full ESC steady-state)
         d->set_attitude_setpoint(0.0, 0.0, 0.0, hover_thr);
         world.step();
@@ -60,6 +60,7 @@ int main() {
     // 4. Individual Motor Failure Test (Motor 3 Failure)
     d->inject_motor_failure(2, MotorHealthState::FAILED);
     for (int i = 0; i < 100; ++i) { // 0.25s
+        d->set_attitude_setpoint(0.0, 0.0, 0.0, hover_thr);
         world.step();
     }
     std::cout << "  Motor 3 Failed RPM: " << d->telemetry().motor_rpm[2] << " (Expected: 0.0)\n";

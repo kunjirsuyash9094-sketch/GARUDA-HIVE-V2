@@ -34,6 +34,8 @@ int main() {
     for (int i = 0; i < 100; ++i) {
         d->mutable_physics_state().velocity = {0.0, 0.0, 0.0};
         d->mutable_physics_state().position = {0.0, 5.0, 0.0};
+        d->mutable_physics_state().angular_velocity = {0.0, 0.0, 0.0};
+        d->mutable_physics_state().orientation = Quat::identity();
         d->set_attitude_setpoint(0.0, 0.0, 0.0, hover_thr);
         world.step();
     }
@@ -52,10 +54,12 @@ int main() {
               << d->telemetry().effective_com_offset_m.y << " m -> OK\n";
 
     // 4. Hover with 12.00 kg Payload (Requires ~117.7 N to balance 12.0 kg)
-    double hover_thr_12kg = 0.65;
+    double hover_thr_12kg = 0.68;
     for (int i = 0; i < 100; ++i) {
         d->mutable_physics_state().velocity = {0.0, 0.0, 0.0};
         d->mutable_physics_state().position = {0.0, 5.0, 0.0};
+        d->mutable_physics_state().angular_velocity = {0.0, 0.0, 0.0};
+        d->mutable_physics_state().orientation = Quat::identity();
         d->set_attitude_setpoint(0.0, 0.0, 0.0, hover_thr_12kg);
         world.step();
     }
