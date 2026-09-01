@@ -97,6 +97,7 @@ private:
     FlightControlSetpoints   _setpoints{};
     bool                     _in_contact{true};
 
+    Vec3d                    _spawn_pos{0.0, 0.28, 0.0};
     // Subsystems
     RigidBodyIntegrator      _integrator;
     MotorSystem              _motors;

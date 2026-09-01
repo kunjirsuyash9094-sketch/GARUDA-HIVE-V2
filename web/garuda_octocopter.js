@@ -511,33 +511,9 @@ class GarudaOctocopterModel {
             );
         }
 
-        // 2. Authoritative RPM-Driven Propeller Rotation & Motion Blur
+        // 2. Authoritative RPM Cache for Continuous Native Render Loop
         if (telem.motor_rpm && Array.isArray(telem.motor_rpm)) {
-            const numProps = this.props.length;
-            for (let i = 0; i < numProps; i++) {
-                const rpm = telem.motor_rpm[i] || (telem.motor_rpm.length > 0 ? telem.motor_rpm[i % telem.motor_rpm.length] : 0);
-                const spinDir = (i % 2 === 0) ? 1.0 : -1.0;
-
-                // omega = RPM * 2 * pi / 60
-                const omega = (rpm * 2.0 * Math.PI) / 60.0;
-                const deltaRot = spinDir * omega * dt;
-
-                if (this.props[i]) {
-                    this.props[i].rotation.y += deltaRot;
-                }
-
-                // Motion Blur: Fades in smoothly only above 2500 RPM (Max opacity = 0.60)
-                if (this.propBlurs[i]) {
-                    const blurOnsetRpm = 2500.0;
-                    const blurMaxRpm = 5500.0;
-                    let blurOpacity = 0.0;
-                    if (rpm > blurOnsetRpm) {
-                        const factor = Math.min(1.0, (rpm - blurOnsetRpm) / (blurMaxRpm - blurOnsetRpm));
-                        blurOpacity = factor * 0.60;
-                    }
-                    this.propBlurs[i].opacity = blurOpacity;
-                }
-            }
+            this.latestMotorRpms = telem.motor_rpm;
         }
 
         // 3. Reconnaissance FLIR Gimbal Stabilization
@@ -555,6 +531,40 @@ class GarudaOctocopterModel {
                 s.mesh.material.opacity = (strobePhase > 0.3) ? 1.0 : 0.2;
             }
         });
+    }
+
+    /**
+     * Continuous Render-Loop Propeller Rotation (Runs at native 60/144 FPS)
+     */
+    updateInRenderLoop(dt) {
+        const rpms = this.latestMotorRpms || (window.GarudaFlight ? window.GarudaFlight.motorRpms : null);
+        if (!rpms) return;
+
+        const numProps = this.props.length;
+        for (let i = 0; i < numProps; i++) {
+            const rpm = rpms[i] || (rpms.length > 0 ? rpms[i % rpms.length] : 0);
+            const spinDir = (i % 2 === 0) ? 1.0 : -1.0;
+
+            // omega = RPM * 2 * pi / 60
+            const omega = (rpm * 2.0 * Math.PI) / 60.0;
+            const deltaRot = spinDir * omega * dt;
+
+            if (this.props[i]) {
+                this.props[i].rotation.y += deltaRot;
+            }
+
+            // Motion Blur: Fades in smoothly only above 2500 RPM (Max opacity = 0.60)
+            if (this.propBlurs[i]) {
+                const blurOnsetRpm = 2500.0;
+                const blurMaxRpm = 5500.0;
+                let blurOpacity = 0.0;
+                if (rpm > blurOnsetRpm) {
+                    const factor = Math.min(1.0, (rpm - blurOnsetRpm) / (blurMaxRpm - blurOnsetRpm));
+                    blurOpacity = factor * 0.60;
+                }
+                this.propBlurs[i].opacity = blurOpacity;
+            }
+        }
     }
 
     triggerCrashDestruction(impactSpeed = 3.0) {

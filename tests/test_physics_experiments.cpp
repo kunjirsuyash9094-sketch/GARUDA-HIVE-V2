@@ -99,7 +99,7 @@ int main() {
             double thr = 0.20 + (t / 2.0) * 0.55; // Ramp from idle to climb throttle
             d->set_attitude_setpoint(0.0, 0.0, 0.0, thr);
             world.step();
-            if (liftoff_time < 0.0 && d->telemetry().altitude_m > 0.30) {
+            if (liftoff_time < 0.0 && d->telemetry().altitude_m > 0.02) {
                 liftoff_time = t;
             }
         }
@@ -107,10 +107,10 @@ int main() {
 
         ExperimentMetrics m;
         m.name = "Exp 03: Emergent Takeoff Profile";
-        m.expected = "Liftoff at T > mg (t ≈ 1.2s - 1.7s), alt > 0.35m";
-        m.measured = "Liftoff t=" + std::to_string(liftoff_time) + " s, final alt=" + std::to_string(final_alt) + " m";
+        m.expected = "Liftoff at T > mg (t ≈ 1.2s - 1.7s), alt_agl > 0.20m";
+        m.measured = "Liftoff t=" + std::to_string(liftoff_time) + " s, final alt_agl=" + std::to_string(final_alt) + " m";
         m.error = std::abs(liftoff_time - 1.5);
-        m.passed = (liftoff_time > 0.4 && liftoff_time < 1.9 && final_alt > 0.30);
+        m.passed = (liftoff_time > 0.4 && liftoff_time < 1.9 && final_alt > 0.20);
         results.push_back(m);
     }
 

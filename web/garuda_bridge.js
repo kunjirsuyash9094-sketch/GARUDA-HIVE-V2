@@ -202,14 +202,38 @@ class GarudaSimulationClient {
             this.octoModel.updateFromTelemetry(d);
         }
 
-        // 2. Real-time Audio Modulation (Motor Whine + Propeller Air Chop)
+        // 2. Synchronize Authoritative State with Local Flight Engine
+        if (window.GarudaFlight) {
+            if (d.position) window.GarudaFlight.position = d.position;
+            if (d.velocity) window.GarudaFlight.velocity = d.velocity;
+            if (d.rpy_deg) window.GarudaFlight.rotationEuler = d.rpy_deg;
+            if (d.motor_rpm) window.GarudaFlight.motorRpms = d.motor_rpm;
+            if (d.motor_health) window.GarudaFlight.motorHealth = d.motor_health;
+        }
+
+        // 3. Real-time Audio Modulation (Motor Whine + Propeller Air Chop)
         if (window.GarudaAudio && d.motor_rpm) {
             const avgRpm = d.motor_rpm.reduce((a, b) => a + b, 0) / 8.0;
             const thrustRatio = (d.total_thrust || 0) / 98.07;
             window.GarudaAudio.updateMotorSound(avgRpm, thrustRatio);
         }
 
-        // 3. Update Primary Flight Display (PFD)
+        // 4. Update Pilot Inputs & Flight Diagnostics Display
+        if (window.GarudaFlight && window.GarudaFlight.pilotInputs) {
+            const pi = window.GarudaFlight.pilotInputs;
+            const thrElem = document.getElementById('diag-pilot-thr');
+            if (thrElem) thrElem.textContent = `${(pi.throttleNorm * 100).toFixed(1)}%`;
+            const rollElem = document.getElementById('diag-pilot-roll');
+            if (rollElem) rollElem.textContent = `${pi.rollCmdDeg >= 0 ? '+' : ''}${pi.rollCmdDeg.toFixed(1)}°`;
+            const pitchElem = document.getElementById('diag-pilot-pitch');
+            if (pitchElem) pitchElem.textContent = `${pi.pitchCmdDeg >= 0 ? '+' : ''}${pi.pitchCmdDeg.toFixed(1)}°`;
+            const yawElem = document.getElementById('diag-pilot-yaw');
+            if (yawElem) yawElem.textContent = `${pi.yawRateCmdDeg >= 0 ? '+' : ''}${pi.yawRateCmdDeg.toFixed(1)}°/s`;
+            const tgtAltElem = document.getElementById('diag-target-alt');
+            if (tgtAltElem) tgtAltElem.textContent = `${pi.targetAltM.toFixed(2)} m`;
+        }
+
+        // 5. Update Primary Flight Display (PFD)
         const altElem = document.getElementById('pfd-alt');
         if (altElem) altElem.textContent = `${(d.altitude || 0).toFixed(2)} m`;
 

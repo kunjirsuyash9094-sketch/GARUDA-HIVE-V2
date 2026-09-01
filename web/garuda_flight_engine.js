@@ -1,15 +1,14 @@
 /**
- * GARUDA HIVE V2 — Authoritative 6-DOF Multirotor Flight Dynamics & Control Engine
+ * GARUDA HIVE V2 — Rock-Solid Authoritative 6-DOF Multirotor Flight Dynamics & Control Engine
  * 
  * Physical Causal Chain:
- * FLIGHT COMMAND -> FLIGHT CONTROLLER -> MOTOR MIXER -> 1st-ORDER ESC LAG -> RPM 
- * -> BLADE ELEMENT PROPULSION (THRUST + DRAG TORQUE) -> 6-DOF NEWTON-EULER RIGID BODY 
- * -> GROUND CONTACT (SPRING-DAMPER + COULOMB FRICTION) -> TELEMETRY
+ * PILOT INPUT -> FLIGHT CONTROLLER -> MOTOR MIXER -> 1st-ORDER ESC LAG -> RPM 
+ * -> BLADE ELEMENT PROPULSION -> 6-DOF NEWTON-EULER RIGID BODY -> GROUND CONTACT -> TELEMETRY
  * 
- * Strict Realism Guarantee:
- * - NO artificial Euler angle interpolations
- * - NO velocity decay damping or coordinate snapping
- * - NO altitude teleportation
+ * Strict Realism Guarantees:
+ * - NO autonomous climbing on arming: Disarmed / Armed-on-ground throttle is strictly 0.0 (Idle RPM only, thrust < 1N)
+ * - NO vertical UP-DOWN oscillations: Smooth velocity-rate altitude hold with anti-windup PID
+ * - NO artificial Euler interpolations or coordinate snapping
  * - Motion emerges EXCLUSIVELY from simulated aerodynamic forces and torques
  */
 
@@ -63,6 +62,7 @@
             this.throttleSensitivity = 1.0;
             this.pitchRollAgility = 1.0;
             this.yawAgility = 1.0;
+            this.controlScheme = 'MODE2'; // 'MODE2' (Drone RC) or 'CLASSIC' (Flight Sim)
 
             // =========================================================================
             // 2. 6-DOF Physical State Variables (Newton-Euler)
@@ -88,15 +88,26 @@
             // 3. Flight Controller & Setpoint State
             // =========================================================================
             this.armed = false;
-            this.flightMode = 'ALT_HOLD'; // ALT_HOLD, POS_HOLD, STABILIZE, AUTO_LAUNCH, AUTO_LAND
+            this.isFlying = false;
             this.isLaunching = false;
             this.isLanding = false;
             this.landingPhase = 'idle';
+            this.flightMode = 'ALT_HOLD'; // ALT_HOLD, POS_HOLD, STABILIZE, AUTO_LAUNCH, AUTO_LAND
             this.targetAltitude = 3.0; // meters AGL
             this.homePosition = { x: 0.0, y: this.groundClearance, z: 0.0 };
 
-            // Cascaded PID Controllers
-            this.pidAlt = { kp: 1.8, ki: 0.25, kd: 1.4, integral: 0.0, prevErr: 0.0 };
+            // Live Diagnostic Pilot Inputs (Exposed for UI Debug HUD)
+            this.pilotInputs = {
+                throttleNorm: 0.0,
+                rollCmdDeg: 0.0,
+                pitchCmdDeg: 0.0,
+                yawRateCmdDeg: 0.0,
+                targetAltM: 3.0,
+                climbRateDemand: 0.0
+            };
+
+            // Cascaded Altitude & Attitude PID Controllers
+            this.pidAlt = { kp: 1.8, ki: 0.20, kd: 1.2, integral: 0.0, prevErr: 0.0 };
             this.attRollP = 6.5;
             this.attPitchP = 6.5;
             this.pidRateRoll = { kp: 0.25, ki: 0.08, kd: 0.006, integral: 0.0, prevErr: 0.0 };
@@ -137,9 +148,12 @@
                 else if (e.key === 's' || e.key === 'S') normCode = 'KeyS';
                 else if (e.key === 'a' || e.key === 'A') normCode = 'KeyA';
                 else if (e.key === 'd' || e.key === 'D') normCode = 'KeyD';
+                else if (e.key === 'q' || e.key === 'Q') normCode = 'KeyQ';
+                else if (e.key === 'e' || e.key === 'E') normCode = 'KeyE';
                 else if (e.key === 'l' || e.key === 'L') normCode = 'KeyL';
                 else if (e.key === 'h' || e.key === 'H') normCode = 'KeyH';
                 else if (e.key === 'r' || e.key === 'R') normCode = 'KeyR';
+                else if (e.key === 'x' || e.key === 'X') normCode = 'KeyX';
                 else if (e.key === ' ') normCode = 'Space';
 
                 if (this.activeKeys[normCode]) return;
@@ -157,9 +171,12 @@
                 else if (e.key === 's' || e.key === 'S') normCode = 'KeyS';
                 else if (e.key === 'a' || e.key === 'A') normCode = 'KeyA';
                 else if (e.key === 'd' || e.key === 'D') normCode = 'KeyD';
+                else if (e.key === 'q' || e.key === 'Q') normCode = 'KeyQ';
+                else if (e.key === 'e' || e.key === 'E') normCode = 'KeyE';
                 else if (e.key === 'l' || e.key === 'L') normCode = 'KeyL';
                 else if (e.key === 'h' || e.key === 'H') normCode = 'KeyH';
                 else if (e.key === 'r' || e.key === 'R') normCode = 'KeyR';
+                else if (e.key === 'x' || e.key === 'X') normCode = 'KeyX';
                 else if (e.key === ' ') normCode = 'Space';
 
                 this.activeKeys[normCode] = false;
@@ -176,7 +193,7 @@
                 case 'Space':
                     if (!this.armed) {
                         this.arm();
-                    } else if (this.position.y <= this.groundClearance + 0.10) {
+                    } else if (!this.isFlying || this.position.y <= this.groundClearance + 0.08) {
                         this.launch();
                     } else {
                         this.hover();
@@ -213,17 +230,19 @@
 
         arm() {
             this.armed = true;
-            this.isLanding = false;
             this.isLaunching = false;
+            this.isLanding = false;
+            // Drone is armed on ground, NOT flying yet -> stays seated at idle RPM
             if (window.GarudaAudio) window.GarudaAudio.playArmChime();
             if (window.GarudaClient && window.GarudaClient.connected) {
                 window.GarudaClient.sendAction("arm");
             }
-            console.log("[GARUDA Flight Engine] ⚡ ARMED: Motors spinning up to idle RPM.");
+            console.log("[GARUDA Flight Engine] ⚡ ARMED: Motors spinning at idle RPM (Ground Resting).");
         }
 
         disarm() {
             this.armed = false;
+            this.isFlying = false;
             this.isLaunching = false;
             this.isLanding = false;
             this.landingPhase = 'idle';
@@ -236,6 +255,7 @@
 
         launch() {
             this.armed = true;
+            this.isFlying = true;
             this.isLaunching = true;
             this.isLanding = false;
             this.flightMode = 'AUTO_LAUNCH';
@@ -266,13 +286,14 @@
             this.flightMode = 'POS_HOLD';
             this.targetAltitude = Math.max(1.0, this.position.y - this.groundClearance);
             if (window.GarudaClient && window.GarudaClient.connected) {
-                window.GarudaClient.setControl(0.0, 0.0, 0.0, 0.5833);
+                window.GarudaClient.sendAction("hover");
             }
             console.log(`[GARUDA Flight Engine] 🎯 HOVER at ${this.targetAltitude.toFixed(2)}m AGL.`);
         }
 
         resetLocalState() {
             this.armed = false;
+            this.isFlying = false;
             this.isLaunching = false;
             this.isLanding = false;
             this.landingPhase = 'idle';
@@ -342,93 +363,110 @@
         step(dt) {
             dt = Math.min(dt, 0.025); // Cap integration step at 40Hz min
 
-            // 1. Process Pilot Keyboard Commands
+            // 1. Process Pilot Keyboard Commands (Mode 2 or Classic)
             const keys = this.activeKeys;
-            let pitchCmd = 0.0;  // Nose Down (-) / Nose Up (+)
-            let rollCmd = 0.0;   // Right Down (+) / Left Down (-)
-            let yawRateCmd = 0.0;// Turn CW (+) / Turn CCW (-)
-            let climbCmd = 0.0;  // Throttle demand
+            let pitchCmd = 0.0;   // Nose Down (-) / Nose Up (+)
+            let rollCmd = 0.0;    // Right Down (+) / Left Down (-)
+            let yawRateCmd = 0.0; // Turn CW (+) / Turn CCW (-)
+            let climbRateCmd = 0.0;// Desired vertical climb/descent velocity (m/s)
 
             const agility = this.pitchRollAgility || 1.0;
             const sensitivity = this.throttleSensitivity || 1.0;
 
-            if (keys['ArrowUp']) pitchCmd -= 0.20 * agility; // 11.5 deg pitch forward
-            if (keys['ArrowDown']) pitchCmd += 0.20 * agility; // 11.5 deg pitch back
-            if (keys['ArrowRight']) rollCmd += 0.20 * agility; // 11.5 deg roll right
-            if (keys['ArrowLeft']) rollCmd -= 0.20 * agility; // 11.5 deg roll left
+            if (this.controlScheme === 'CLASSIC') {
+                // Classic Flight Simulator (W/S = Pitch, A/D = Roll, Q/E = Yaw, Up/Down = Climb)
+                if (keys['KeyW']) pitchCmd -= 0.20 * agility;
+                if (keys['KeyS']) pitchCmd += 0.20 * agility;
+                if (keys['KeyD']) rollCmd += 0.20 * agility;
+                if (keys['KeyA']) rollCmd -= 0.20 * agility;
+                if (keys['KeyE']) yawRateCmd += 0.75 * (this.yawAgility || 1.0);
+                if (keys['KeyQ']) yawRateCmd -= 0.75 * (this.yawAgility || 1.0);
+                if (keys['ArrowUp']) climbRateCmd += 2.0 * sensitivity;
+                if (keys['ArrowDown']) climbRateCmd -= 2.0 * sensitivity;
+            } else {
+                // Standard Drone RC Mode 2 (WASD = Throttle/Yaw, Arrows = Pitch/Roll)
+                if (keys['ArrowUp']) pitchCmd -= 0.20 * agility; // 11.5 deg pitch forward
+                if (keys['ArrowDown']) pitchCmd += 0.20 * agility; // 11.5 deg pitch back
+                if (keys['ArrowRight']) rollCmd += 0.20 * agility; // 11.5 deg roll right
+                if (keys['ArrowLeft']) rollCmd -= 0.20 * agility; // 11.5 deg roll left
 
-            if (keys['KeyD'] || keys['KeyE']) yawRateCmd += 0.75 * (this.yawAgility || 1.0); // rad/s
-            if (keys['KeyA'] || keys['KeyQ']) yawRateCmd -= 0.75 * (this.yawAgility || 1.0);
+                if (keys['KeyD'] || keys['KeyE']) yawRateCmd += 0.75 * (this.yawAgility || 1.0); // rad/s
+                if (keys['KeyA'] || keys['KeyQ']) yawRateCmd -= 0.75 * (this.yawAgility || 1.0);
 
-            if (keys['KeyW'] || keys['KeyI']) climbCmd += 1.0 * sensitivity;
-            if (keys['KeyS'] || keys['KeyK']) climbCmd -= 1.0 * sensitivity;
+                if (keys['KeyW'] || keys['KeyI']) climbRateCmd += 2.0 * sensitivity; // +2 m/s climb rate
+                if (keys['KeyS'] || keys['KeyK']) climbRateCmd -= 2.0 * sensitivity; // -2 m/s descent rate
+            }
+
+            const agl = Math.max(0.0, this.position.y - this.groundClearance);
+
+            // 2. Altitude Hold & Smooth Target Altitude Integration
+            let computedThrottle = 0.0;
+
+            if (this.armed) {
+                if (!this.isFlying && agl <= 0.08) {
+                    // Armed on Ground Pad: Idle throttle (0.0), drone stays firmly on pad
+                    computedThrottle = 0.0;
+                    if (climbRateCmd > 0.5) {
+                        this.isFlying = true;
+                        this.targetAltitude = 1.5;
+                    }
+                } else if (this.isLaunching) {
+                    this.targetAltitude = 3.0;
+                    computedThrottle = 0.72; // Strong initial lift
+                    if (agl >= 2.6) {
+                        this.isLaunching = false;
+                        this.isFlying = true;
+                        this.flightMode = 'ALT_HOLD';
+                    }
+                } else if (this.isLanding) {
+                    this.targetAltitude = Math.max(0.0, this.targetAltitude - 0.75 * dt);
+                    computedThrottle = 0.42; // Controlled descent
+                    if (agl <= 0.03 && Math.abs(this.velocity.y) < 0.15) {
+                        this.disarm();
+                        if (window.GarudaAudio) window.GarudaAudio.playTouchdownSound();
+                        console.log("[GARUDA Flight Engine] 🎯 TOUCHDOWN CONFIRMED ON PAD.");
+                    }
+                } else {
+                    // Smooth Velocity-Rate Altitude Hold in Flight
+                    if (Math.abs(climbRateCmd) > 0.01) {
+                        this.targetAltitude = clamp(this.targetAltitude + climbRateCmd * dt, 0.3, 50.0);
+                    }
+
+                    // Altitude PID Controller: Target Altitude -> Target Vertical Velocity -> Smooth Throttle
+                    const altErr = this.targetAltitude - agl;
+                    this.pidAlt.integral = clamp(this.pidAlt.integral + altErr * dt, -4.0, 4.0);
+                    const dAlt = (altErr - this.pidAlt.prevErr) / dt;
+                    this.pidAlt.prevErr = altErr;
+
+                    const desVy = clamp(this.pidAlt.kp * altErr + this.pidAlt.ki * this.pidAlt.integral + this.pidAlt.kd * dAlt, -2.0, 3.0);
+                    const vyErr = desVy - this.velocity.y;
+                    computedThrottle = clamp(0.5833 + (vyErr * 0.08), 0.20, 0.90);
+                }
+            } else {
+                computedThrottle = 0.0;
+            }
+
+            // Expose Live Pilot Inputs for Diagnostic HUD
+            this.pilotInputs = {
+                throttleNorm: computedThrottle,
+                rollCmdDeg: rollCmd * RAD2DEG,
+                pitchCmdDeg: pitchCmd * RAD2DEG,
+                yawRateCmdDeg: yawRateCmd * RAD2DEG,
+                targetAltM: this.targetAltitude,
+                climbRateDemand: climbRateCmd
+            };
 
             // If connected to C++ backend, delegate authoritative control setpoints
             if (window.GarudaClient && window.GarudaClient.connected) {
-                let thrNorm = 0.5833; // Exact steady-state hover throttle for 10.0kg
-                if (this.isLaunching) {
-                    thrNorm = 0.72; // Powerful climb thrust (140N > 98N weight)
-                } else if (this.isLanding) {
-                    thrNorm = 0.42; // Controlled descent thrust (70N < 98N weight)
-                } else {
-                    thrNorm = clamp(0.5833 + climbCmd * 0.25, 0.05, 0.95);
-                }
-
-                window.GarudaClient.setControl(rollCmd, pitchCmd, yawRateCmd, thrNorm);
+                window.GarudaClient.setControl(rollCmd, pitchCmd, yawRateCmd, computedThrottle);
                 return;
             }
 
             // =====================================================================
-            // Standalone Authoritative C++ Style 6-DOF Physics Integration
+            // Standalone Authoritative 6-DOF Physical Integration
             // =====================================================================
             this.simTick++;
             this.simTime += dt;
-
-            const agl = Math.max(0.0, this.position.y - this.groundClearance);
-
-            // 2. Flight Controller: Altitude Loop -> Throttle Command
-            let throttleNorm = 0.0;
-            if (this.armed) {
-                if (this.isLaunching) {
-                    this.targetAltitude = 3.0;
-                    if (agl >= 2.8) {
-                        this.isLaunching = false;
-                        this.flightMode = 'POS_HOLD';
-                    }
-                } else if (this.isLanding) {
-                    const dx = this.homePosition.x - this.position.x;
-                    const dz = this.homePosition.z - this.position.z;
-                    const distHome = Math.sqrt(dx * dx + dz * dz);
-
-                    if (distHome > 0.3) {
-                        this.landingPhase = 'transit_home';
-                        const desVx = clamp(dx * 1.5, -3.0, 3.0);
-                        const desVz = clamp(dz * 1.5, -3.0, 3.0);
-                        pitchCmd = clamp((desVz - this.velocity.z) * 0.15, -0.20, 0.20);
-                        rollCmd = clamp((desVx - this.velocity.x) * 0.15, -0.20, 0.20);
-                    } else {
-                        this.landingPhase = 'descent';
-                        this.targetAltitude = Math.max(0.0, this.targetAltitude - 0.75 * dt);
-                        if (agl <= 0.02 && Math.abs(this.velocity.y) < 0.15) {
-                            this.disarm();
-                            if (window.GarudaAudio) window.GarudaAudio.playTouchdownSound();
-                            console.log("[GARUDA Flight Engine] 🎯 TOUCHDOWN SECURED ON PAD.");
-                        }
-                    }
-                } else if (climbCmd !== 0) {
-                    this.targetAltitude = clamp(this.targetAltitude + climbCmd * 2.5 * dt, 0.2, 50.0);
-                }
-
-                // Altitude PID: Alt Error -> Target Vertical Acceleration -> Base Throttle
-                const altErr = this.targetAltitude - agl;
-                this.pidAlt.integral = clamp(this.pidAlt.integral + altErr * dt, -5.0, 5.0);
-                const dAlt = (altErr - this.pidAlt.prevErr) / dt;
-                this.pidAlt.prevErr = altErr;
-
-                const targetAz = this.pidAlt.kp * altErr + this.pidAlt.ki * this.pidAlt.integral + this.pidAlt.kd * dAlt;
-                // Nominal hover requires T = mg (98.07 N) -> throttle ~0.5833
-                throttleNorm = clamp(0.5833 + (targetAz / (this.gravity * 2.0)), 0.05, 0.95);
-            }
 
             // 3. Attitude Outer Loop (Angle Error -> Rate Demand)
             const qw = this.quaternion.w, qx = this.quaternion.x, qy = this.quaternion.y, qz = this.quaternion.z;
@@ -443,24 +481,18 @@
             const rollRateDemand = clamp(this.attRollP * (rollCmd - rollCur), -3.0, 3.0);
             const pitchRateDemand = clamp(this.attPitchP * (pitchCmd - pitchCur), -3.0, 3.0);
 
-            // 4. Angular Rate Inner Loop (Rate PID -> Normalized Moment Demands)
+            // 4. Inner Angular Rate Loop with Derivative-on-Measurement
             const rollRateErr = rollRateDemand - this.angularVel.x;
             this.pidRateRoll.integral = clamp(this.pidRateRoll.integral + rollRateErr * dt, -20.0, 20.0);
-            const dRollRate = (rollRateErr - this.pidRateRoll.prevErr) / dt;
-            this.pidRateRoll.prevErr = rollRateErr;
-            const tauRollDem = clamp(this.pidRateRoll.kp * rollRateErr + this.pidRateRoll.ki * this.pidRateRoll.integral + this.pidRateRoll.kd * dRollRate, -0.25, 0.25);
+            const tauRollDem = clamp(this.pidRateRoll.kp * rollRateErr + this.pidRateRoll.ki * this.pidRateRoll.integral - this.pidRateRoll.kd * this.angularAcc.x, -0.25, 0.25);
 
             const pitchRateErr = pitchRateDemand - this.angularVel.y;
             this.pidRatePitch.integral = clamp(this.pidRatePitch.integral + pitchRateErr * dt, -20.0, 20.0);
-            const dPitchRate = (pitchRateErr - this.pidRatePitch.prevErr) / dt;
-            this.pidRatePitch.prevErr = pitchRateErr;
-            const tauPitchDem = clamp(this.pidRatePitch.kp * pitchRateErr + this.pidRatePitch.ki * this.pidRatePitch.integral + this.pidRatePitch.kd * dPitchRate, -0.25, 0.25);
+            const tauPitchDem = clamp(this.pidRatePitch.kp * pitchRateErr + this.pidRatePitch.ki * this.pidRatePitch.integral - this.pidRatePitch.kd * this.angularAcc.y, -0.25, 0.25);
 
             const yawRateErr = yawRateCmd - this.angularVel.z;
             this.pidRateYaw.integral = clamp(this.pidRateYaw.integral + yawRateErr * dt, -20.0, 20.0);
-            const dYawRate = (yawRateErr - this.pidRateYaw.prevErr) / dt;
-            this.pidRateYaw.prevErr = yawRateErr;
-            const tauYawDem = clamp(this.pidRateYaw.kp * yawRateErr + this.pidRateYaw.ki * this.pidRateYaw.integral + this.pidRateYaw.kd * dYawRate, -0.20, 0.20);
+            const tauYawDem = clamp(this.pidRateYaw.kp * yawRateErr + this.pidRateYaw.ki * this.pidRateYaw.integral, -0.20, 0.20);
 
             // 5. 8-Rotor Octo-X Mixer Allocation
             for (let i = 0; i < 8; i++) {
@@ -472,12 +504,12 @@
                     const kPitch = Math.sin(angleRad);
                     const kYaw = (i % 2 === 0) ? 1.0 : -1.0;
 
-                    let alloc = throttleNorm + kRoll * tauRollDem + kPitch * tauPitchDem + kYaw * tauYawDem;
+                    let alloc = computedThrottle + kRoll * tauRollDem + kPitch * tauPitchDem + kYaw * tauYawDem;
                     alloc = clamp(Math.max(alloc, 0.05), 0.0, 1.0);
                     this.targetRpms[i] = alloc * this.motorMaxRpm;
                 }
 
-                // First-Order Motor/ESC Lag Dynamics: domega/dt = (omega_target - omega)/tau
+                // First-Order Motor/ESC Lag Dynamics
                 const alpha = 1.0 - Math.exp(-dt / this.tauEsc);
                 this.motorRpms[i] += alpha * (this.targetRpms[i] - this.motorRpms[i]);
             }
@@ -526,7 +558,7 @@
                 z: thrustBody.z + this.quaternion.w * uv.z + uuv.z
             };
 
-            // World Forces: Thrust + Gravity + Aerodynamic Form Drag
+            // World Forces: Thrust + Dynamic Gravity + Airframe Drag
             const relVx = this.velocity.x - this.windVelocity.x;
             const relVz = this.velocity.z - this.windVelocity.z;
             const aeroDragX = -0.5 * this.airDensity * 0.35 * 0.45 * Math.abs(relVx) * relVx;
@@ -575,7 +607,7 @@
                 if (this.velocity.y < 0.0) this.velocity.y = 0.0;
             }
 
-            // Rotational Acceleration (Euler's Rotational Equations)
+            // Rotational Acceleration
             const gyroX = (this.Iyy - this.Izz) * this.angularVel.y * this.angularVel.z;
             const gyroY = (this.Izz - this.Ixx) * this.angularVel.z * this.angularVel.x;
             const gyroZ = (this.Ixx - this.Iyy) * this.angularVel.x * this.angularVel.y;

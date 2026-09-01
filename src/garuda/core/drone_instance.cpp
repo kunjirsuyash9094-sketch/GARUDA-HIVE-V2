@@ -21,7 +21,8 @@ DroneInstance::DroneInstance(
     , _sensors(_cfg, seed)
     , _controller(_cfg)
     , _payload()
-    , _health() {
+    , _health()
+    , _spawn_pos(spawn_pos) {
     reset(spawn_pos);
 }
 
@@ -31,6 +32,8 @@ void DroneInstance::reset(Vec3d spawn_pos, Quat spawn_orient) noexcept {
     _direct_throttles.assign(_cfg.rotor_count, 0.0);
     _setpoints = {};
     _in_contact = true;
+
+    if (spawn_pos.y <= 0.0) spawn_pos = _spawn_pos;
 
     _integrator.reset(spawn_pos, spawn_orient);
     _motors.reset();
@@ -281,7 +284,7 @@ void DroneInstance::step(EnvironmentSystem& env, uint64_t tick, double dt) noexc
     _telemetry.position_world = updated_s.position;
     _telemetry.velocity_world = updated_s.velocity;
     _telemetry.acceleration_world = updated_s.acceleration;
-    _telemetry.altitude_m = updated_s.position.y;
+    _telemetry.altitude_m = std::max(0.0, updated_s.position.y - (env.ground_height() + _cfg.ground_contact_radius_m));
     _telemetry.ground_speed_ms = std::sqrt(updated_s.velocity.x * updated_s.velocity.x + updated_s.velocity.z * updated_s.velocity.z);
     _telemetry.vertical_speed_ms = updated_s.velocity.y;
 

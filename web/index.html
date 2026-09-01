@@ -665,30 +665,70 @@
     </div>
   </div>
 
+  <!-- Live Pilot Inputs & Real-Time Diagnostics -->
+  <div class="panel" style="padding:14px;">
+    <div class="card-header">
+      <span class="card-title">Live Pilot Inputs & Demands</span>
+      <span class="badge" style="color:var(--accent-cyan);font-size:10px;">TELEMETRY LINK</span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:6px;margin-bottom:8px;font-family:var(--font-mono);font-size:11px;">
+      <div style="background:rgba(15,27,48,0.7);padding:6px 8px;border-radius:6px;border:1px solid rgba(44,90,134,0.35);">
+        <span style="font-size:9px;color:var(--fg-muted);display:block;">THROTTLE</span>
+        <span id="diag-pilot-thr" style="color:#00f0ff;font-weight:700;">0.0%</span>
+      </div>
+      <div style="background:rgba(15,27,48,0.7);padding:6px 8px;border-radius:6px;border:1px solid rgba(44,90,134,0.35);">
+        <span style="font-size:9px;color:var(--fg-muted);display:block;">ROLL CMD</span>
+        <span id="diag-pilot-roll" style="color:#39ff14;font-weight:700;">0.0°</span>
+      </div>
+      <div style="background:rgba(15,27,48,0.7);padding:6px 8px;border-radius:6px;border:1px solid rgba(44,90,134,0.35);">
+        <span style="font-size:9px;color:var(--fg-muted);display:block;">PITCH CMD</span>
+        <span id="diag-pilot-pitch" style="color:#39ff14;font-weight:700;">0.0°</span>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-family:var(--font-mono);font-size:11px;margin-bottom:8px;">
+      <div style="background:rgba(15,27,48,0.7);padding:6px 8px;border-radius:6px;border:1px solid rgba(44,90,134,0.35);">
+        <span style="font-size:9px;color:var(--fg-muted);display:block;">YAW RATE CMD</span>
+        <span id="diag-pilot-yaw" style="color:#ffb800;font-weight:700;">0.0°/s</span>
+      </div>
+      <div style="background:rgba(15,27,48,0.7);padding:6px 8px;border-radius:6px;border:1px solid rgba(44,90,134,0.35);">
+        <span style="font-size:9px;color:var(--fg-muted);display:block;">TARGET ALTITUDE</span>
+        <span id="diag-target-alt" style="color:#00f0ff;font-weight:700;">3.00 m</span>
+      </div>
+    </div>
+
+    <!-- Control Scheme Switcher -->
+    <div style="display:flex;gap:6px;align-items:center;margin-top:4px;">
+      <button id="btn-scheme-mode2" class="btn btn-primary" style="flex:1;font-size:10px;padding:6px;" onclick="setControlScheme('MODE2')">
+        🎮 MODE 2 (Drone RC)
+      </button>
+      <button id="btn-scheme-classic" class="btn" style="flex:1;font-size:10px;padding:6px;" onclick="setControlScheme('CLASSIC')">
+        ✈️ CLASSIC (Flight Sim)
+      </button>
+    </div>
+  </div>
+
   <!-- Live Keyboard Command Map (Visualizer) -->
   <div class="panel" style="padding:14px;">
     <div class="card-header">
       <span class="card-title">Keyboard Flight Command Map</span>
-      <span style="font-size:10px;color:var(--fg-muted);">LIVE INPUT</span>
-    </div>
-
-    <div style="font-size:10px;color:var(--fg-muted);margin-bottom:4px;">
-      Press physical keys on your keyboard to maneuver:
+      <span id="active-scheme-label" style="font-size:10px;color:var(--accent-cyan);font-family:var(--font-mono);">MODE 2 RC</span>
     </div>
 
     <!-- Keyboard visual keys layout -->
     <div class="keyboard-grid">
-      <div id="key-KeyW" class="key-cap">W<small>Climb Up</small></div>
-      <div id="key-KeyS" class="key-cap">S<small>Descend</small></div>
-      <div id="key-KeyA" class="key-cap">A<small>Yaw Left</small></div>
-      <div id="key-KeyD" class="key-cap">D<small>Yaw Right</small></div>
+      <div id="key-KeyW" class="key-cap">W<small id="sub-key-w">Climb Up</small></div>
+      <div id="key-KeyS" class="key-cap">S<small id="sub-key-s">Descend</small></div>
+      <div id="key-KeyA" class="key-cap">A<small id="sub-key-a">Yaw Left</small></div>
+      <div id="key-KeyD" class="key-cap">D<small id="sub-key-d">Yaw Right</small></div>
     </div>
 
     <div class="keyboard-grid">
-      <div id="key-ArrowUp" class="key-cap">↑<small>Pitch Fwd</small></div>
-      <div id="key-ArrowDown" class="key-cap">↓<small>Pitch Back</small></div>
-      <div id="key-ArrowLeft" class="key-cap">←<small>Roll Left</small></div>
-      <div id="key-ArrowRight" class="key-cap">→<small>Roll Right</small></div>
+      <div id="key-ArrowUp" class="key-cap">↑<small id="sub-key-up">Pitch Fwd</small></div>
+      <div id="key-ArrowDown" class="key-cap">↓<small id="sub-key-down">Pitch Back</small></div>
+      <div id="key-ArrowLeft" class="key-cap">←<small id="sub-key-left">Roll Left</small></div>
+      <div id="key-ArrowRight" class="key-cap">→<small id="sub-key-right">Roll Right</small></div>
     </div>
 
     <div style="display:grid;grid-template-columns:1.8fr 1fr 1fr;gap:6px;margin-top:6px;">
@@ -1467,6 +1507,40 @@ function setFlightMode(mode) {
     if (window.GarudaAudio) window.GarudaAudio.playUiClick();
 }
 
+function setControlScheme(scheme) {
+    if (window.GarudaFlight) {
+        window.GarudaFlight.controlScheme = scheme;
+    }
+    const btnM2 = document.getElementById('btn-scheme-mode2');
+    const btnClassic = document.getElementById('btn-scheme-classic');
+    const label = document.getElementById('active-scheme-label');
+
+    if (scheme === 'CLASSIC') {
+        if (btnClassic) btnClassic.classList.add('btn-primary');
+        if (btnM2) btnM2.classList.remove('btn-primary');
+        if (label) label.textContent = 'CLASSIC SIM';
+        
+        const kw = document.getElementById('sub-key-w'); if (kw) kw.textContent = 'Pitch Fwd';
+        const ks = document.getElementById('sub-key-s'); if (ks) ks.textContent = 'Pitch Back';
+        const ka = document.getElementById('sub-key-a'); if (ka) ka.textContent = 'Roll Left';
+        const kd = document.getElementById('sub-key-d'); if (kd) kd.textContent = 'Roll Right';
+        const kup = document.getElementById('sub-key-up'); if (kup) kup.textContent = 'Climb Up';
+        const kdn = document.getElementById('sub-key-down'); if (kdn) kdn.textContent = 'Descend';
+    } else {
+        if (btnM2) btnM2.classList.add('btn-primary');
+        if (btnClassic) btnClassic.classList.remove('btn-primary');
+        if (label) label.textContent = 'MODE 2 RC';
+
+        const kw = document.getElementById('sub-key-w'); if (kw) kw.textContent = 'Climb Up';
+        const ks = document.getElementById('sub-key-s'); if (ks) ks.textContent = 'Descend';
+        const ka = document.getElementById('sub-key-a'); if (ka) ka.textContent = 'Yaw Left';
+        const kd = document.getElementById('sub-key-d'); if (kd) kd.textContent = 'Yaw Right';
+        const kup = document.getElementById('sub-key-up'); if (kup) kup.textContent = 'Pitch Fwd';
+        const kdn = document.getElementById('sub-key-down'); if (kdn) kdn.textContent = 'Pitch Back';
+    }
+    if (window.GarudaAudio) window.GarudaAudio.playUiClick();
+}
+
 // ----------------------------------------------------------------------------
 // Gimbal Controls
 // ----------------------------------------------------------------------------
@@ -1531,6 +1605,10 @@ function animate(timestamp) {
 
     if (window.GarudaFlight) {
         window.GarudaFlight.step(dt);
+    }
+
+    if (octoModel && octoModel.updateInRenderLoop) {
+        octoModel.updateInRenderLoop(dt);
     }
 
     updateSnowfall(dt);

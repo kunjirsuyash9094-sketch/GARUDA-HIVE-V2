@@ -14,29 +14,35 @@ using dronesim::Vec3d;
 using dronesim::Quat;
 using dronesim::Wrench;
 
+/**
+ * High-performance PID with Derivative-on-Measurement and Anti-Windup Clamping.
+ * Eliminates derivative kick/chatter when setpoints arrive at 60 Hz while physics runs at 400 Hz.
+ */
 struct ScalarPID {
     double kp{0.0}, ki{0.0}, kd{0.0};
     double integral_limit{50.0};
     double _integral{0.0};
-    double _prev_error{0.0};
+    double _prev_meas{0.0};
     bool   _first{true};
 
     void reset() noexcept {
         _integral = 0.0;
-        _prev_error = 0.0;
+        _prev_meas = 0.0;
         _first = true;
     }
 
-    [[nodiscard]] double update(double error, double dt) noexcept {
+    [[nodiscard]] double update(double error, double measurement, double dt) noexcept {
         if (dt <= 0.0) return 0.0;
+
         _integral += error * dt;
         _integral = std::clamp(_integral, -integral_limit, integral_limit);
 
+        // Derivative on measurement: -d(meas)/dt prevents setpoint derivative kick
         double derivative = 0.0;
         if (!_first) {
-            derivative = (error - _prev_error) / dt;
+            derivative = -(measurement - _prev_meas) / dt;
         }
-        _prev_error = error;
+        _prev_meas = measurement;
         _first = false;
 
         return kp * error + ki * _integral + kd * derivative;
@@ -100,7 +106,7 @@ public:
 
         if (!armed) {
             reset();
-            return out;
+            return out; // Strictly 0.0 on all motors when disarmed
         }
 
         // 1. Convert to Standard Aerospace FRD Body Frame
@@ -119,14 +125,14 @@ public:
         double pitch_rate_sp = std::clamp(_cfg.att_pitch_p * pitch_err, -_cfg.max_roll_pitch_rate_rad_s, _cfg.max_roll_pitch_rate_rad_s);
         double yaw_rate_sp = std::clamp(sp.yaw_rate_rads, -_cfg.max_yaw_rate_rad_s, _cfg.max_yaw_rate_rad_s);
 
-        // 3. Inner Angular Rate Loop (PID-Controller -> Normalized Moment Demands)
+        // 3. Inner Angular Rate Loop with Derivative-on-Measurement
         double rate_roll_err = roll_rate_sp - w_frd.x;
         double rate_pitch_err = pitch_rate_sp - w_frd.y;
         double rate_yaw_err = yaw_rate_sp - w_frd.z;
 
-        out.tau_roll_dem = std::clamp(_pid_roll.update(rate_roll_err, dt), -0.25, 0.25);
-        out.tau_pitch_dem = std::clamp(_pid_pitch.update(rate_pitch_err, dt), -0.25, 0.25);
-        out.tau_yaw_dem = std::clamp(_pid_yaw.update(rate_yaw_err, dt), -0.20, 0.20);
+        out.tau_roll_dem = std::clamp(_pid_roll.update(rate_roll_err, w_frd.x, dt), -0.25, 0.25);
+        out.tau_pitch_dem = std::clamp(_pid_pitch.update(rate_pitch_err, w_frd.y, dt), -0.25, 0.25);
+        out.tau_yaw_dem = std::clamp(_pid_yaw.update(rate_yaw_err, w_frd.z, dt), -0.20, 0.20);
         out.thrust_norm = std::clamp(sp.thrust_norm, 0.0, 1.0);
 
         // 4. 8-Rotor Octo-X Mixer Allocation in FRD Body Frame
