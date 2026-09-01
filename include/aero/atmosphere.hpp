@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 #include "core/math_types.hpp"
 
 namespace dronesim {

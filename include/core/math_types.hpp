@@ -39,6 +39,7 @@ struct Vec3d {
 
     [[nodiscard]] Vec3d operator+(Vec3d o) const noexcept { return {x+o.x, y+o.y, z+o.z}; }
     [[nodiscard]] Vec3d operator-(Vec3d o) const noexcept { return {x-o.x, y-o.y, z-o.z}; }
+    [[nodiscard]] Vec3d operator-() const noexcept { return {-x, -y, -z}; }
     [[nodiscard]] Vec3d operator*(double s) const noexcept { return {x*s, y*s, z*s}; }
     [[nodiscard]] Vec3d operator/(double s) const noexcept { double r=1.0/s; return {x*r,y*r,z*r}; }
     Vec3d& operator+=(Vec3d o) noexcept { x+=o.x; y+=o.y; z+=o.z; return *this; }

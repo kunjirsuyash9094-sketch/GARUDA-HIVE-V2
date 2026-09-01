@@ -2,207 +2,1555 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>SkySim — browser drone simulator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GARUDA HIVE V2 — Autonomous Heavy-Lift Cinema Drone Simulator</title>
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<!-- Three.js & OrbitControls -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<!-- Procedural PBR Textures -->
+<script src="garuda_textures.js"></script>
+<!-- Procedural Web Audio Synthesizer -->
+<script src="garuda_audio.js"></script>
+<!-- 3D Heavy-Lift Cinema Drone Model -->
+<script src="garuda_octocopter.js"></script>
+<!-- 400Hz Flight Controller & Keyboard Engine -->
+<script src="garuda_flight_engine.js"></script>
+<!-- Authoritative C++ Simulation Bridge -->
+<script src="garuda_bridge.js"></script>
+
 <style>
-  :root { --bg:#0d1b2a; --fg:#e8eef5; --accent:#5fb4ff; --panel:rgba(10,20,32,.82); }
-  * { box-sizing:border-box; }
-  body { margin:0; font-family:ui-monospace,Menlo,Consolas,monospace; background:var(--bg); color:var(--fg); overflow:hidden; }
-  #view { position:fixed; inset:0; }
-  .panel { position:fixed; background:var(--panel); border:1px solid #23405e; border-radius:10px; padding:12px 14px; backdrop-filter:blur(4px); }
-  #hud { top:14px; left:14px; min-width:230px; line-height:1.5; font-size:13px; }
-  #hud b { color:var(--accent); }
-  #ctrl { top:14px; right:14px; width:360px; max-height:calc(100vh - 28px); overflow:auto; }
-  #ctrl h1 { font-size:15px; margin:0 0 8px; color:var(--accent); }
-  #ctrl .row { display:flex; gap:8px; margin:8px 0; }
-  button { background:#14324e; color:var(--fg); border:1px solid #2c5a86; border-radius:7px; padding:7px 12px; cursor:pointer; font-family:inherit; font-size:13px; }
-  button:hover { background:#1b4467; }
-  button.on { background:var(--accent); color:#04121f; border-color:var(--accent); }
-  textarea { width:100%; height:190px; background:#07131f; color:#cfe6ff; border:1px solid #23405e; border-radius:7px; padding:8px; font-family:inherit; font-size:12px; resize:vertical; }
-  .hint { font-size:11px; color:#8fa9c2; margin-top:6px; line-height:1.5; }
-  #banner { top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; display:none; }
-  a { color:var(--accent); }
+  :root {
+    --bg-dark: #070d18;
+    --bg-panel: rgba(10, 19, 34, 0.88);
+    --bg-card: rgba(15, 27, 48, 0.80);
+    --border-glow: rgba(0, 240, 255, 0.45);
+    --border-subtle: rgba(44, 90, 134, 0.40);
+    --accent-cyan: #00f0ff;
+    --accent-blue: #3a86ff;
+    --accent-green: #39ff14;
+    --accent-yellow: #ffb800;
+    --accent-red: #ff3366;
+    --accent-purple: #9d4edd;
+    --fg-main: #f0f6fc;
+    --fg-muted: #8b9eb7;
+    --font-ui: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+  body {
+    background: #87ceeb;
+    color: var(--fg-main);
+    font-family: var(--font-ui);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  /* 3D Viewport */
+  #viewport {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    cursor: grab;
+  }
+  #viewport:active { cursor: grabbing; }
+
+  /* Glass Panels */
+  .panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 10px 36px rgba(0, 0, 0, 0.5);
+    z-index: 10;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .panel:hover {
+    border-color: var(--border-glow);
+    box-shadow: 0 10px 36px rgba(0, 240, 255, 0.2);
+  }
+
+  /* Top Navigation Bar */
+  #header-bar {
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    right: 14px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    z-index: 30;
+  }
+  .brand-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .brand-icon {
+    width: 34px;
+    height: 34px;
+    background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 17px;
+    color: #050e1a;
+    box-shadow: 0 0 16px rgba(0, 240, 255, 0.5);
+  }
+  .brand-title {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: #ffffff;
+  }
+  .brand-subtitle {
+    font-size: 11px;
+    color: var(--accent-cyan);
+    font-weight: 500;
+    font-family: var(--font-mono);
+  }
+
+  /* Status Badges */
+  .badge {
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: var(--font-mono);
+    border: 1px solid var(--border-subtle);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(15, 27, 48, 0.75);
+  }
+
+  /* Left-Side Small Corner Floating Toolbar & Popout Cards */
+  #left-toolbar {
+    position: fixed;
+    top: 76px;
+    left: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 25;
+    pointer-events: auto;
+  }
+
+  .nav-pill-btn {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    color: var(--fg-main);
+    padding: 8px 14px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: var(--font-ui);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    backdrop-filter: blur(12px);
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    text-align: left;
+    white-space: nowrap;
+  }
+  .nav-pill-btn:hover {
+    border-color: var(--accent-cyan);
+    color: #ffffff;
+    box-shadow: 0 0 14px rgba(0, 240, 255, 0.35);
+    transform: translateX(3px);
+  }
+  .nav-pill-btn.active {
+    background: linear-gradient(135deg, rgba(0, 240, 255, 0.25), rgba(58, 134, 255, 0.25));
+    border-color: var(--accent-cyan);
+    color: var(--accent-cyan);
+    box-shadow: 0 0 16px rgba(0, 240, 255, 0.4);
+  }
+
+  /* Popout Info Cards Stack on the Left */
+  #left-cards-container {
+    position: fixed;
+    top: 76px;
+    left: 190px;
+    bottom: 20px;
+    width: 340px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 20;
+    pointer-events: auto;
+    overflow-y: auto;
+    padding-right: 6px;
+    max-height: calc(100vh - 100px);
+  }
+
+  .info-popout-card {
+    display: none;
+    animation: slideInLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  @keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-15px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  /* Right-Side Interactive Flight Control Panel */
+  #right-control-panel {
+    position: fixed;
+    top: 76px;
+    right: 14px;
+    bottom: 20px;
+    width: 380px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 25;
+    pointer-events: auto;
+    overflow-y: auto;
+    padding-right: 4px;
+    max-height: calc(100vh - 100px);
+  }
+
+  /* Keyboard Visualizer Grid */
+  .keyboard-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    margin: 8px 0;
+  }
+  .key-cap {
+    background: rgba(15, 27, 48, 0.85);
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    padding: 6px 4px;
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--fg-muted);
+    transition: all 0.1s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  }
+  .key-cap small {
+    display: block;
+    font-size: 8px;
+    font-family: var(--font-ui);
+    font-weight: 500;
+    color: #64748b;
+    margin-top: 1px;
+  }
+  .key-cap.pressed {
+    background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+    color: #050e1a;
+    border-color: #ffffff;
+    box-shadow: 0 0 16px var(--accent-cyan);
+    transform: translateY(1px);
+  }
+  .key-cap.pressed small { color: #050e1a; font-weight: 700; }
+
+  /* Cards & Sections */
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(44, 90, 134, 0.3);
+  }
+  .card-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--accent-cyan);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .telemetry-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    margin-bottom: 5px;
+  }
+  .telemetry-label { color: var(--fg-muted); }
+  .telemetry-val { font-family: var(--font-mono); font-weight: 600; color: var(--fg-main); }
+
+  /* Buttons & Controls */
+  .btn {
+    background: linear-gradient(135deg, rgba(15, 27, 48, 0.9), rgba(24, 42, 74, 0.9));
+    border: 1px solid var(--border-subtle);
+    color: var(--fg-main);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: var(--font-ui);
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .btn:hover {
+    border-color: var(--accent-cyan);
+    box-shadow: 0 0 14px rgba(0, 240, 255, 0.35);
+    transform: translateY(-1px);
+  }
+  .btn:active { transform: translateY(0); }
+  .btn-primary { background: linear-gradient(135deg, #0088aa, #00f0ff); color: #050e1a; font-weight: 700; }
+  .btn-danger { background: linear-gradient(135deg, #880022, #ff3366); color: #fff; }
+  .btn-warning { background: linear-gradient(135deg, #886600, #ffb800); color: #050e1a; font-weight: 700; }
+  .btn-success { background: linear-gradient(135deg, #008822, #39ff14); color: #050e1a; font-weight: 700; }
+
+  /* Giant Launch Button */
+  .btn-launch {
+    background: linear-gradient(135deg, #00c6ff, #0072ff);
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 800;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid #00f0ff;
+    box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
+    letter-spacing: 0.5px;
+  }
+  .btn-launch:hover {
+    box-shadow: 0 0 28px rgba(0, 240, 255, 0.7);
+    transform: translateY(-2px);
+  }
+
+  /* Form Elements */
+  select, input[type="range"] {
+    background: rgba(15, 27, 48, 0.95);
+    border: 1px solid var(--border-subtle);
+    color: var(--fg-main);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    outline: none;
+    width: 100%;
+  }
+  select:focus { border-color: var(--accent-cyan); }
+  input[type="range"] {
+    -webkit-appearance: none;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    padding: 0;
+    margin: 6px 0;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    background: var(--accent-cyan);
+    cursor: pointer;
+    box-shadow: 0 0 8px var(--accent-cyan);
+  }
+
+  /* Motor Grid */
+  .motor-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+
+  /* Sensor HUD Grid */
+  .sensor-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+  .sensor-card {
+    background: rgba(15, 27, 48, 0.75);
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(44, 90, 134, 0.35);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10px;
+  }
+
+  /* Component Inspector Popup */
+  #component-inspector-modal {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 440px;
+    background: var(--bg-panel);
+    border: 1px solid var(--accent-cyan);
+    border-radius: 12px;
+    padding: 16px;
+    z-index: 50;
+    box-shadow: 0 12px 40px rgba(0, 240, 255, 0.25);
+    display: none;
+  }
+
+  /* Scrollbars */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(0, 240, 255, 0.25); border-radius: 2px; }
 </style>
 </head>
 <body>
-<canvas id="view"></canvas>
 
-<div id="hud" class="panel">
-  <div><b>SkySim</b> · browser core</div>
-  <div>ALT <span id="alt">–</span> m &nbsp; VS <span id="vs">–</span> m/s</div>
-  <div>R <span id="r">–</span>° &nbsp; P <span id="p">–</span>° &nbsp; Y <span id="y">–</span>°</div>
-  <div>THRUST <span id="thr">–</span> N</div>
-  <div>MODE <span id="mode">keyboard</span> &nbsp; <span id="armed">DISARMED</span></div>
-</div>
+<!-- 3D Three.js Viewport Canvas Container -->
+<div id="viewport"></div>
 
-<div id="ctrl" class="panel">
-  <h1>Controls</h1>
-  <div class="row">
-    <button id="armBtn">Arm</button>
-    <button id="resetBtn">Reset</button>
-    <button id="kbBtn" class="on">Keyboard</button>
-    <button id="scriptBtn">Script</button>
+<!-- Top Navigation Bar -->
+<header id="header-bar" class="panel">
+  <div class="brand-group">
+    <div class="brand-icon">G</div>
+    <div>
+      <div class="brand-title">GARUDA HIVE V2 <span style="font-size:11px;color:var(--accent-cyan);font-weight:400;margin-left:6px;">GARUDA-HL-01</span></div>
+      <div class="brand-subtitle">AUTONOMOUS HEAVY-LIFT CINEMA DRONE SIMULATOR</div>
+    </div>
   </div>
-  <div class="hint">Keyboard: <b>W/S</b> throttle · <b>A/D</b> yaw · <b>arrows</b> pitch/roll</div>
-  <div style="margin-top:10px">Algorithm (JS) — return <code>[roll,pitch,yaw_rate,throttle]</code>:</div>
-  <textarea id="code">// obs = {pos:[x,y,z], vel:[..], euler:[roll,pitch,yaw], rates:[..], alt}
-// t = seconds. Return [roll, pitch, yaw_rate, throttle] (throttle 0..1).
-function control(obs, t) {
-  const target = 5.0;                     // hold 5 m
-  let thr = 0.33 + 0.15 * (target - obs.alt) - 0.05 * obs.vel[1];
-  return [0, 0, 0, Math.max(0, Math.min(1, thr))];
-}</textarea>
-  <div class="row"><button id="runBtn">Run script ▶</button></div>
-  <div class="hint" id="err" style="color:#ff8f8f"></div>
-  <div class="hint">Heavy ML? This client-side core is for classical control + light policies.
-  For PyTorch/GPU, connect the same algorithm to the native agent server (Phase 1).</div>
+
+  <!-- Camera Modes & Audio Selector -->
+  <div style="display:flex;align-items:center;gap:8px;">
+    <span style="font-size:10px;color:var(--fg-muted);font-weight:700;">CAM:</span>
+    <button class="btn" style="padding:4px 8px;font-size:10px;" id="cam-orbit-btn" onclick="setCameraMode('orbit')">🎥 ORBIT</button>
+    <button class="btn" style="padding:4px 8px;font-size:10px;" id="cam-chase-btn" onclick="setCameraMode('chase')">🚁 FOLLOW</button>
+    <button class="btn" style="padding:4px 8px;font-size:10px;" id="cam-fpv-btn" onclick="setCameraMode('fpv')">👁️ FPV</button>
+    <button class="btn" style="padding:4px 8px;font-size:10px;" id="cam-gimbal-btn" onclick="setCameraMode('gimbal')">📷 GIMBAL</button>
+
+    <div style="width:1px;height:20px;background:rgba(255,255,255,0.1);margin:0 4px;"></div>
+
+    <button class="btn" id="audio-toggle-btn" style="padding:4px 10px;font-size:10px;" onclick="toggleAudio()">🔊 AUDIO: ON</button>
+  </div>
+
+  <!-- Status Badges -->
+  <div style="display:flex;align-items:center;gap:8px;">
+    <div id="sim-tick-val" class="badge" style="color:var(--accent-cyan);">TICK: 0 (0.00s)</div>
+    <div id="vehicle-state-badge" class="badge" style="color:var(--fg-muted);">DISARMED</div>
+    <div id="system-health-badge" class="badge" style="color:var(--accent-green);border-color:var(--accent-green);">HEALTH: NOMINAL</div>
+  </div>
+</header>
+
+<!-- Left Small Corner Floating Toolbar -->
+<nav id="left-toolbar">
+  <button class="nav-pill-btn" id="btn-toggle-telemetry" onclick="toggleLeftCard('card-telemetry', this)">
+    <span>📊</span> Flight Telemetry
+  </button>
+  <button class="nav-pill-btn" id="btn-toggle-battery" onclick="toggleLeftCard('card-battery', this)">
+    <span>🔋</span> 6S LiPo Battery
+  </button>
+  <button class="nav-pill-btn" id="btn-toggle-propulsion" onclick="toggleLeftCard('card-propulsion', this)">
+    <span>⚙️</span> 8-Rotor Propulsion
+  </button>
+  <button class="nav-pill-btn" id="btn-toggle-sensors" onclick="toggleLeftCard('card-sensors', this)">
+    <span>🛰️</span> Sensor Suite (8x)
+  </button>
+  <button class="nav-pill-btn" id="btn-toggle-payload" onclick="toggleLeftCard('card-payload', this)">
+    <span>📦</span> Modular Payloads
+  </button>
+  <button class="nav-pill-btn" id="btn-toggle-failure" onclick="toggleLeftCard('card-failure', this)">
+    <span>⚠️</span> Failure Studio
+  </button>
+  <button class="nav-pill-btn" id="btn-toggle-specs" onclick="toggleLeftCard('card-specs', this)">
+    <span>📐</span> Airframe Blueprint
+  </button>
+
+  <div style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.1);">
+    <button class="btn" style="width:100%;font-size:10px;padding:5px;" onclick="toggleAllLeftCards()">
+      👁️ Toggle All Cards
+    </button>
+  </div>
+</nav>
+
+<!-- Left Stack of Popout Cards (Non-intrusive) -->
+<div id="left-cards-container">
+
+  <!-- 1. Flight Telemetry Card -->
+  <div id="card-telemetry" class="panel info-popout-card" style="padding:12px;">
+    <div class="card-header">
+      <span class="card-title">Primary Flight Telemetry</span>
+      <button class="btn" style="padding:2px 6px;font-size:9px;" onclick="toggleLeftCard('card-telemetry')">✕</button>
+    </div>
+    <div class="telemetry-row">
+      <span class="telemetry-label">Altitude (AGL)</span>
+      <span id="pfd-alt" class="telemetry-val" style="color:var(--accent-cyan);font-size:13px;">0.00 m</span>
+    </div>
+    <div class="telemetry-row">
+      <span class="telemetry-label">Ground Speed</span>
+      <span id="pfd-spd" class="telemetry-val">0.0 km/h</span>
+    </div>
+    <div class="telemetry-row">
+      <span class="telemetry-label">Vertical Speed</span>
+      <span id="pfd-vs" class="telemetry-val">0.00 m/s</span>
+    </div>
+    <div class="telemetry-row">
+      <span class="telemetry-label">Attitude (Roll / Pitch)</span>
+      <span class="telemetry-val"><span id="pfd-roll">0.0°</span> / <span id="pfd-pitch">0.0°</span></span>
+    </div>
+    <div class="telemetry-row">
+      <span class="telemetry-label">Heading (Yaw)</span>
+      <span id="pfd-yaw" class="telemetry-val">0.0°</span>
+    </div>
+    <div class="telemetry-row">
+      <span class="telemetry-label">Propulsion Thrust</span>
+      <span id="pfd-thrust" class="telemetry-val" style="color:var(--accent-yellow);">0.0 N (TWR 0.00)</span>
+    </div>
+  </div>
+
+  <!-- 2. 6S LiPo Battery Card -->
+  <div id="card-battery" class="panel info-popout-card" style="padding:12px;">
+    <div class="card-header">
+      <span class="card-title">6S LiPo Power Ledger</span>
+      <div style="display:flex;gap:4px;align-items:center;">
+        <span id="bat-pct" class="telemetry-val" style="color:var(--accent-green);font-size:12px;">100.0%</span>
+        <button class="btn" style="padding:2px 6px;font-size:9px;" onclick="toggleLeftCard('card-battery')">✕</button>
+      </div>
+    </div>
+    <div class="telemetry-row">
+      <span class="telemetry-label">Terminal Voltage</span>
+      <span id="bat-volt" class="telemetry-val">25.20 V</span>
+    </div>
+    <div class="telemetry-row">
+      <span class="telemetry-label">Discharge Current</span>
+      <span id="bat-curr" class="telemetry-val">0.0 A</span>
+    </div>
+    <div class="telemetry-row">
+      <span class="telemetry-label">Electrical Power (Total)</span>
+      <span id="bat-pwr" class="telemetry-val">0 W</span>
+    </div>
+    <div style="margin-top:6px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.08);">
+      <div style="font-size:10px;font-weight:700;color:var(--fg-muted);margin-bottom:3px;">6S Cell Voltages (4.20V max)</div>
+      <div id="cell-voltages-container"></div>
+    </div>
+  </div>
+
+  <!-- 3. 8-Rotor Propulsion HUD Card -->
+  <div id="card-propulsion" class="panel info-popout-card" style="padding:12px;">
+    <div class="card-header">
+      <span class="card-title">8-Rotor Propulsion</span>
+      <button class="btn" style="padding:2px 6px;font-size:9px;" onclick="toggleLeftCard('card-propulsion')">✕</button>
+    </div>
+    <div id="motor-telemetry-grid" class="motor-grid"></div>
+  </div>
+
+  <!-- 4. Extensible Sensors Card -->
+  <div id="card-sensors" class="panel info-popout-card" style="padding:12px;">
+    <div class="card-header">
+      <span class="card-title">Sensor Suite (8 Sensors)</span>
+      <button class="btn" style="padding:2px 6px;font-size:9px;" onclick="toggleLeftCard('card-sensors')">✕</button>
+    </div>
+    <div id="sensor-telemetry-grid" class="sensor-grid"></div>
+  </div>
+
+  <!-- 5. Modular Payload & Gimbal Card -->
+  <div id="card-payload" class="panel info-popout-card" style="padding:12px;">
+    <div class="card-header">
+      <span class="card-title">Modular Payloads & Gimbal</span>
+      <button class="btn" style="padding:2px 6px;font-size:9px;" onclick="toggleLeftCard('card-payload')">✕</button>
+    </div>
+    <div style="margin-bottom:8px;">
+      <label style="font-size:10px;color:var(--fg-muted);display:block;margin-bottom:3px;">ACTIVE PAYLOAD BAY (Keys 1-7)</label>
+      <select id="payload-select" onchange="window.GarudaClient.attachPayload(this.value)">
+        <option value="1">1. 4K UHD Cinema Camera Rig (2.20 kg)</option>
+        <option value="2">2. 3D Aerial LiDAR Scanner Module (2.20 kg)</option>
+        <option value="3">3. Radiometric Dual Thermal FLIR (1.10 kg)</option>
+        <option value="4">4. 61MP Photogrammetry Mapping (1.60 kg)</option>
+        <option value="5">5. Heavy Cargo Transport Pod (3.50 kg)</option>
+        <option value="6">6. Ultrasonic NDT Structural Probe (2.80 kg)</option>
+        <option value="7">7. Search & Rescue Searchlight Winch (4.20 kg)</option>
+        <option value="0">0. [DETACH] No Payload (0.00 kg)</option>
+      </select>
+    </div>
+
+    <!-- Gimbal Pitch & Yaw -->
+    <div style="background:rgba(0,0,0,0.3);padding:6px;border-radius:6px;">
+      <div style="display:flex;justify-content:space-between;font-size:10px;">
+        <span>Gimbal Pitch (-90° to +20°)</span>
+        <span id="gimbal-pitch-val" style="font-family:var(--font-mono);color:var(--accent-cyan);">-15.0°</span>
+      </div>
+      <input type="range" id="gimbal-pitch-slider" min="-90" max="20" value="-15" step="1" oninput="updateGimbal()"/>
+
+      <div style="display:flex;justify-content:space-between;font-size:10px;margin-top:3px;">
+        <span>Gimbal Yaw (-180° to +180°)</span>
+        <span id="gimbal-yaw-val" style="font-family:var(--font-mono);color:var(--accent-cyan);">0.0°</span>
+      </div>
+      <input type="range" id="gimbal-yaw-slider" min="-180" max="180" value="0" step="1" oninput="updateGimbal()"/>
+
+      <div style="display:flex;gap:4px;margin-top:4px;">
+        <button class="btn" style="flex:1;padding:3px 5px;font-size:9px;" onclick="setGimbalPreset(-90, 0)">Nadir (Down)</button>
+        <button class="btn" style="flex:1;padding:3px 5px;font-size:9px;" onclick="setGimbalPreset(-45, 0)">45° Survey</button>
+        <button class="btn" style="flex:1;padding:3px 5px;font-size:9px;" onclick="setGimbalPreset(0, 0)">Horizon</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Failure Injection Studio Card -->
+  <div id="card-failure" class="panel info-popout-card" style="padding:12px;">
+    <div class="card-header">
+      <span class="card-title">Failure Injection Studio</span>
+      <button class="btn btn-primary" style="padding:3px 8px;font-size:9px;" onclick="window.GarudaClient.resetFailures()">RESTORE ALL</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:4px;">
+      <button class="btn btn-danger" style="padding:4px 2px;font-size:9px;" onclick="window.GarudaClient.failMotor(0)">FAIL M1</button>
+      <button class="btn btn-danger" style="padding:4px 2px;font-size:9px;" onclick="window.GarudaClient.failMotor(1)">FAIL M2</button>
+      <button class="btn btn-danger" style="padding:4px 2px;font-size:9px;" onclick="window.GarudaClient.failMotor(2)">FAIL M3</button>
+      <button class="btn btn-danger" style="padding:4px 2px;font-size:9px;" onclick="window.GarudaClient.failMotor(3)">FAIL M4</button>
+      <button class="btn btn-danger" style="padding:4px 2px;font-size:9px;" onclick="window.GarudaClient.failMotor(4)">FAIL M5</button>
+      <button class="btn btn-danger" style="padding:4px 2px;font-size:9px;" onclick="window.GarudaClient.failMotor(5)">FAIL M6</button>
+      <button class="btn btn-danger" style="padding:4px 2px;font-size:9px;" onclick="window.GarudaClient.failMotor(6)">FAIL M7</button>
+      <button class="btn btn-danger" style="padding:4px 2px;font-size:9px;" onclick="window.GarudaClient.failMotor(7)">FAIL M8</button>
+    </div>
+  </div>
+
+  <!-- 7. Technical Specifications Blueprint Card -->
+  <div id="card-specs" class="panel info-popout-card" style="padding:12px;">
+    <div class="card-header">
+      <span class="card-title">Airframe Blueprint</span>
+      <button class="btn" style="padding:2px 6px;font-size:9px;" onclick="toggleLeftCard('card-specs')">✕</button>
+    </div>
+    <div class="telemetry-row"><span class="telemetry-label">Model Designation</span><span class="telemetry-val">GARUDA-HL-01</span></div>
+    <div class="telemetry-row"><span class="telemetry-label">Rotor Configuration</span><span class="telemetry-val">8-Rotor Octo-X (15" Props)</span></div>
+    <div class="telemetry-row"><span class="telemetry-label">Dry Airframe Mass</span><span class="telemetry-val">8.50 kg</span></div>
+    <div class="telemetry-row"><span class="telemetry-label">Payload Capacity</span><span id="payload-mass" class="telemetry-val" style="color:var(--accent-cyan);">2.20 kg</span></div>
+    <div class="telemetry-row"><span class="telemetry-label">Total Flight Mass</span><span id="total-vehicle-mass" class="telemetry-val" style="color:var(--accent-yellow);font-weight:700;">10.70 kg</span></div>
+    <div class="telemetry-row"><span class="telemetry-label">Max Takeoff Weight (MTOW)</span><span class="telemetry-val">15.00 kg</span></div>
+    <div class="telemetry-row"><span class="telemetry-label">Autopilot Dynamics Kernel</span><span class="telemetry-val" style="color:var(--accent-green);">C++20 & 400Hz BET</span></div>
+  </div>
+
 </div>
 
-<div id="banner" class="panel">
-  <b>WASM core not found.</b><br/>Build it first:<br/><code>web/build_wasm.sh</code><br/>
-  (needs <a href="https://emscripten.org">Emscripten</a>), then serve <code>web/</code>.
+<!-- Right-Side Interactive Flight Control Panel & Live Keyboard Visualizer -->
+<aside id="right-control-panel">
+
+  <!-- Main Flight Action Triggers -->
+  <div class="panel" style="padding:14px;">
+    <div class="card-header">
+      <span class="card-title">Flight Operations Control</span>
+      <span class="badge" style="color:var(--accent-cyan);font-size:10px;">DIRECT LINK</span>
+    </div>
+
+    <!-- Massive Launch & Land Buttons -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+      <button class="btn btn-launch" onclick="window.GarudaFlight.launch()">
+        🚀 LAUNCH (TAKEOFF)
+      </button>
+      <button class="btn btn-warning" style="font-size:12px;font-weight:800;border-radius:10px;padding:12px;" onclick="window.GarudaFlight.land()">
+        🛬 AUTO LAND
+      </button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:6px;">
+      <button class="btn btn-success" onclick="window.GarudaFlight.arm()">⚡ ARM</button>
+      <button class="btn btn-danger" onclick="window.GarudaFlight.disarm()">🛑 DISARM</button>
+      <button class="btn btn-primary" onclick="window.GarudaFlight.hover()">🎯 HOVER</button>
+    </div>
+
+    <div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:10px;font-weight:700;color:var(--fg-muted);">GYRO AUTO-STABILIZER:</span>
+      <span class="badge" style="color:var(--accent-green);border-color:var(--accent-green);font-size:10px;">LOCKED [400Hz PID]</span>
+    </div>
+  </div>
+
+  <!-- Live Keyboard Command Map (Visualizer) -->
+  <div class="panel" style="padding:14px;">
+    <div class="card-header">
+      <span class="card-title">Keyboard Flight Command Map</span>
+      <span style="font-size:10px;color:var(--fg-muted);">LIVE INPUT</span>
+    </div>
+
+    <div style="font-size:10px;color:var(--fg-muted);margin-bottom:4px;">
+      Press physical keys on your keyboard to maneuver:
+    </div>
+
+    <!-- Keyboard visual keys layout -->
+    <div class="keyboard-grid">
+      <div id="key-KeyW" class="key-cap">W<small>Climb Up</small></div>
+      <div id="key-KeyS" class="key-cap">S<small>Descend</small></div>
+      <div id="key-KeyA" class="key-cap">A<small>Yaw Left</small></div>
+      <div id="key-KeyD" class="key-cap">D<small>Yaw Right</small></div>
+    </div>
+
+    <div class="keyboard-grid">
+      <div id="key-ArrowUp" class="key-cap">↑<small>Pitch Fwd</small></div>
+      <div id="key-ArrowDown" class="key-cap">↓<small>Pitch Back</small></div>
+      <div id="key-ArrowLeft" class="key-cap">←<small>Roll Left</small></div>
+      <div id="key-ArrowRight" class="key-cap">→<small>Roll Right</small></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1.8fr 1fr 1fr;gap:6px;margin-top:6px;">
+      <div id="key-Space" class="key-cap">SPACE<small>Launch / Arm</small></div>
+      <div id="key-KeyL" class="key-cap">L<small>Auto Land</small></div>
+      <div id="key-KeyR" class="key-cap">R<small>Reset Pad</small></div>
+    </div>
+  </div>
+
+  <!-- Flight Modes & Autopilot Tuning -->
+  <div class="panel" style="padding:14px;">
+    <div class="card-header">
+      <span class="card-title">Flight Modes & Agility</span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:4px;margin-bottom:10px;">
+      <button class="btn" id="mode-alt-btn" style="padding:6px;font-size:10px;border-color:var(--accent-cyan);" onclick="setFlightMode('ALT_HOLD')">ALT HOLD</button>
+      <button class="btn" id="mode-stab-btn" style="padding:6px;font-size:10px;" onclick="setFlightMode('STABILIZE')">STABILIZE</button>
+      <button class="btn" id="mode-pos-btn" style="padding:6px;font-size:10px;" onclick="setFlightMode('POS_HOLD')">POS HOLD</button>
+    </div>
+
+    <div style="font-size:10px;margin-bottom:6px;">
+      <div style="display:flex;justify-content:space-between;color:var(--fg-muted);">
+        <span>Pitch / Roll Agility</span>
+        <span id="val-agility" style="font-family:var(--font-mono);color:var(--accent-cyan);">1.0x (25°)</span>
+      </div>
+      <input type="range" min="0.5" max="2.0" step="0.1" value="1.0" oninput="updateAgility(this.value)"/>
+    </div>
+
+    <div style="font-size:10px;">
+      <div style="display:flex;justify-content:space-between;color:var(--fg-muted);">
+        <span>Climb Rate Sensitivity</span>
+        <span id="val-sensitivity" style="font-family:var(--font-mono);color:var(--accent-cyan);">1.0x</span>
+      </div>
+      <input type="range" min="0.5" max="2.0" step="0.1" value="1.0" oninput="updateSensitivity(this.value)"/>
+    </div>
+  </div>
+
+</aside>
+
+<!-- Component Technical Inspector Modal -->
+<div id="component-inspector-modal" class="panel">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+    <span id="inspect-category" class="badge" style="color:var(--accent-cyan);border-color:var(--accent-cyan);">AIRFRAME</span>
+    <button class="btn" style="padding:2px 8px;font-size:10px;" onclick="document.getElementById('component-inspector-modal').style.display='none'">CLOSE</button>
+  </div>
+  <h4 id="inspect-name" style="font-size:15px;font-weight:700;color:#fff;margin-bottom:6px;">Component Name</h4>
+  <p id="inspect-desc" style="font-size:12px;color:var(--fg-muted);line-height:1.5;margin-bottom:10px;">Description text goes here.</p>
+  <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--fg-main);background:rgba(0,0,0,0.3);padding:6px 10px;border-radius:6px;">
+    <span>STATUS: <strong style="color:var(--accent-green);">OPERATIONAL</strong></span>
+    <span>AUTH: <strong>C++20 SIM KERNEL</strong></span>
+  </div>
 </div>
 
-<script src="skysim_core.js" onerror="document.getElementById('banner').style.display='block'"></script>
 <script>
-let core, api, obsPtr, motorsPtr;
-let mode = "keyboard", armed = false, running = false, userFn = null, t0 = 0;
-let kb = { throttle: 0.0 };
-const keys = {};
-
-// ---------- Three.js scene ----------
-const canvas = document.getElementById("view");
-const renderer = new THREE.WebGLRenderer({ canvas, antialias:true });
+// ----------------------------------------------------------------------------
+// Three.js Photorealistic Outdoor Scene & Virtual Environment (Images 2 & 3)
+// ----------------------------------------------------------------------------
+const container = document.getElementById('viewport');
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0d1b2a);
-scene.fog = new THREE.Fog(0x0d1b2a, 40, 160);
-const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
-scene.add(new THREE.HemisphereLight(0xbfd4ff, 0x0a141f, 1.1));
-const sun = new THREE.DirectionalLight(0xffffff, 1.0); sun.position.set(6,12,4); scene.add(sun);
-const grid = new THREE.GridHelper(400, 100, 0x2c5a86, 0x1a3350); scene.add(grid);
 
-function makeDrone() {
-  const g = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.3,0.09,0.3),
-                              new THREE.MeshStandardMaterial({color:0x1a1d22}));
-  g.add(body);
-  const arm = 0.28;
-  const spots = [[arm,-arm,0xd63838],[-arm,-arm,0xd63838],[arm,arm,0xd0d4d8],[-arm,arm,0xd0d4d8]];
-  for (const [x,z,c] of spots) {
-    const r = new THREE.Mesh(new THREE.CylinderGeometry(0.13,0.13,0.02,16),
-                             new THREE.MeshStandardMaterial({color:c}));
-    r.position.set(x,0.05,z); g.add(r);
-  }
-  return g;
-}
-const drone = makeDrone(); scene.add(drone);
+// Sunny Azure Blue Outdoor Sky Dome
+scene.background = new THREE.Color(0x87ceeb);
+scene.fog = new THREE.FogExp2(0xcbe7ff, 0.005);
 
-function resize() {
-  const w = window.innerWidth, h = window.innerHeight;
-  renderer.setSize(w,h); camera.aspect = w/h; camera.updateProjectionMatrix();
-}
-window.addEventListener("resize", resize); resize();
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.set(2.4, 1.4, 2.4);
 
-// ---------- WASM binding ----------
-function bind(Module) {
-  api = {
-    create: Module.cwrap("skysim_create","number",[]),
-    reset:  Module.cwrap("skysim_reset",null,["number","number","number","number"]),
-    arm:    Module.cwrap("skysim_arm",null,["number","number"]),
-    setAtt: Module.cwrap("skysim_set_attitude",null,["number","number","number","number","number"]),
-    step:   Module.cwrap("skysim_step",null,["number","number"]),
-    getObs: Module.cwrap("skysim_get_obs",null,["number","number"]),
-    alt:  Module.cwrap("skysim_altitude","number",["number"]),
-    vs:   Module.cwrap("skysim_vspeed","number",["number"]),
-    thr:  Module.cwrap("skysim_thrust","number",["number"]),
-    roll: Module.cwrap("skysim_roll","number",["number"]),
-    pitch:Module.cwrap("skysim_pitch","number",["number"]),
-    yaw:  Module.cwrap("skysim_yaw","number",["number"]),
-  };
-  core = api.create();
-  obsPtr = Module._malloc(12*8);
-  Module.HEAPF64_ = Module.HEAPF64;
-  window._M = Module;
-  api.reset(core, 0, 2, 0);
-  t0 = performance.now()/1000;
-  loop();
-}
-if (window.SkySimCore) SkySimCore().then(bind);
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+renderer.outputEncoding = THREE.sRGBEncoding;
+container.appendChild(renderer.domElement);
 
-function readObs() {
-  api.getObs(core, obsPtr);
-  const h = window._M.HEAPF64.subarray(obsPtr/8, obsPtr/8 + 12);
-  return { pos:[h[0],h[1],h[2]], vel:[h[3],h[4],h[5]],
-           euler:[h[6],h[7],h[8]], rates:[h[9],h[10],h[11]], alt:h[1] };
+let controls = null;
+if (typeof THREE.OrbitControls !== 'undefined') {
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.target.set(0, 0.45, 0);
+    controls.maxPolarAngle = Math.PI / 2 - 0.02;
 }
 
-// ---------- control each tick ----------
-function computeAction(obs, t) {
-  if (mode === "script" && userFn) {
-    try { const a = userFn(obs, t); return [a[0]||0, a[1]||0, a[2]||0, Math.max(0,Math.min(1,a[3]||0))]; }
-    catch(e){ document.getElementById("err").textContent = e.message; running=false; }
-  }
-  // keyboard
-  if (keys["w"]) kb.throttle = Math.min(1, kb.throttle + 0.01);
-  if (keys["s"]) kb.throttle = Math.max(0, kb.throttle - 0.01);
-  const roll  = (keys["arrowleft"]?-0.4:0) + (keys["arrowright"]?0.4:0);
-  const pitch = (keys["arrowup"]?-0.4:0) + (keys["arrowdown"]?0.4:0);
-  const yaw   = (keys["a"]?-1.5:0) + (keys["d"]?1.5:0);
-  return [roll, pitch, yaw, kb.throttle];
-}
+// Natural Outdoor Sun & Sky Hemispheric Lighting
+// ----------------------------------------------------------------------------
+// Realistic Alpine Winter Sky & Cold Mountain Atmosphere
+// ----------------------------------------------------------------------------
+scene.background = new THREE.Color(0xb2c7de);
+scene.fog = new THREE.FogExp2(0xb2c7de, 0.0055);
 
-// ---------- main loop ----------
-const DT = 1/200; let acc = 0, last = 0;
-function loop() {
-  requestAnimationFrame(loop);
-  const now = performance.now()/1000;
-  if (!last) last = now;
-  acc += Math.min(now - last, 0.1); last = now;
-  while (acc >= DT) {
-    if (armed || mode==="script") {
-      const obs = readObs();
-      const [r,p,yw,th] = computeAction(obs, now - t0);
-      api.setAtt(core, r, p, yw, th);
+const hemiLight = new THREE.HemisphereLight(0xddebf8, 0x8298b0, 1.2);
+scene.add(hemiLight);
+
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.55);
+scene.add(ambientLight);
+
+// Crisp High-Altitude Alpine Sunlight
+const sunLight = new THREE.DirectionalLight(0xffffff, 2.1);
+sunLight.position.set(24, 38, 18);
+sunLight.castShadow = true;
+sunLight.shadow.mapSize.width = 2048;
+sunLight.shadow.mapSize.height = 2048;
+sunLight.shadow.camera.near = 0.5;
+sunLight.shadow.camera.far = 80;
+sunLight.shadow.camera.left = -8;
+sunLight.shadow.camera.right = 8;
+sunLight.shadow.camera.top = 8;
+sunLight.shadow.camera.bottom = -8;
+sunLight.shadow.bias = -0.0001;
+scene.add(sunLight);
+
+// ----------------------------------------------------------------------------
+// Crisp Alpine Snow Valley Terrain
+// ----------------------------------------------------------------------------
+const snowTex = GarudaTextureGenerator ? GarudaTextureGenerator.createSnowTerrainTexture() : null;
+const snowGeo = new THREE.PlaneGeometry(450, 450);
+const snowMat = new THREE.MeshStandardMaterial({
+    map: snowTex || null,
+    color: 0xf4f8fc,
+    roughness: 0.75,
+    metalness: 0.05
+});
+const snowMesh = new THREE.Mesh(snowGeo, snowMat);
+snowMesh.rotation.x = -Math.PI / 2;
+snowMesh.position.y = 0.0;
+snowMesh.receiveShadow = true;
+scene.add(snowMesh);
+
+// ----------------------------------------------------------------------------
+// Majestic 3D Snow-Capped Mountain Range Backdrop
+// ----------------------------------------------------------------------------
+const mountainGroup = new THREE.Group();
+const rockTex = GarudaTextureGenerator ? GarudaTextureGenerator.createMountainRockTexture() : null;
+const rockMat = new THREE.MeshStandardMaterial({
+    map: rockTex || null,
+    color: 0x3a424d,
+    roughness: 0.9,
+    metalness: 0.1
+});
+const snowCapMat = new THREE.MeshStandardMaterial({
+    color: 0xf0f6ff,
+    roughness: 0.6,
+    metalness: 0.05
+});
+
+for (let i = 0; i < 32; i++) {
+    const angle = (i * Math.PI * 2) / 32 + (Math.random() - 0.5) * 0.1;
+    const dist = 85 + Math.random() * 110;
+    const mtnHeight = 45 + Math.random() * 65;
+    const mtnRadius = 24 + Math.random() * 32;
+
+    const mtn = new THREE.Group();
+
+    // Mountain Rock Body
+    const mtnGeo = new THREE.ConeGeometry(mtnRadius, mtnHeight, 7);
+    const mtnMesh = new THREE.Mesh(mtnGeo, rockMat);
+    mtnMesh.position.y = mtnHeight / 2 - 4;
+    mtnMesh.castShadow = true;
+    mtnMesh.receiveShadow = true;
+    mtn.add(mtnMesh);
+
+    // Snow Cap Peak
+    const capHeight = mtnHeight * 0.42;
+    const capRadius = mtnRadius * 0.42;
+    const capGeo = new THREE.ConeGeometry(capRadius, capHeight, 7);
+    const capMesh = new THREE.Mesh(capGeo, snowCapMat);
+    capMesh.position.y = mtnHeight - capHeight / 2 - 4;
+    capMesh.castShadow = true;
+    mtn.add(capMesh);
+
+    mtn.position.set(Math.cos(angle) * dist, 0, Math.sin(angle) * dist);
+    mountainGroup.add(mtn);
+}
+scene.add(mountainGroup);
+
+// ----------------------------------------------------------------------------
+// Snow-Covered Coniferous Alpine Pine Trees
+// ----------------------------------------------------------------------------
+const pineTreeGroup = new THREE.Group();
+const pineTrunkGeo = new THREE.CylinderGeometry(0.18, 0.32, 2.8, 8);
+const pineTrunkMat = new THREE.MeshStandardMaterial({ color: 0x3d2817, roughness: 0.9 });
+const pineNeedleMat = new THREE.MeshStandardMaterial({ color: 0x1c3822, roughness: 0.8 });
+const pineSnowMat = new THREE.MeshStandardMaterial({ color: 0xf0f6ff, roughness: 0.5 });
+
+for (let i = 0; i < 36; i++) {
+    const angle = (i * Math.PI * 2) / 36 + (Math.random() - 0.5) * 0.15;
+    const r = 28 + Math.random() * 45;
+    const tree = new THREE.Group();
+
+    // Trunk
+    const trunk = new THREE.Mesh(pineTrunkGeo, pineTrunkMat);
+    trunk.position.y = 1.4;
+    trunk.castShadow = true;
+    tree.add(trunk);
+
+    // 3 Tiered Cones of Pine Needles with Snow Tops
+    for (let t = 0; t < 3; t++) {
+        const coneRadius = 2.4 - t * 0.55;
+        const coneHeight = 2.2;
+        const coneGeo = new THREE.ConeGeometry(coneRadius, coneHeight, 8);
+        const cone = new THREE.Mesh(coneGeo, pineNeedleMat);
+        cone.position.y = 2.6 + t * 1.5;
+        cone.castShadow = true;
+        tree.add(cone);
+
+        // Snow Cap on tier
+        const snowTierGeo = new THREE.ConeGeometry(coneRadius * 0.85, 0.8, 8);
+        const snowTier = new THREE.Mesh(snowTierGeo, pineSnowMat);
+        snowTier.position.y = 2.6 + t * 1.5 + 0.6;
+        tree.add(snowTier);
     }
-    api.step(core, DT);
-    acc -= DT;
-  }
-  const o = readObs();
-  drone.position.set(o.pos[0], o.pos[1], o.pos[2]);
-  drone.rotation.order = "YXZ";
-  drone.rotation.set(o.euler[1], o.euler[2], o.euler[0]);
-  // chase camera
-  const camPos = new THREE.Vector3(o.pos[0], o.pos[1]+4, o.pos[2]+11);
-  camera.position.lerp(camPos, 0.08);
-  camera.lookAt(o.pos[0], o.pos[1]+0.5, o.pos[2]);
-  // HUD
-  document.getElementById("alt").textContent = api.alt(core).toFixed(2);
-  document.getElementById("vs").textContent  = api.vs(core).toFixed(2);
-  document.getElementById("r").textContent   = api.roll(core).toFixed(1);
-  document.getElementById("p").textContent   = api.pitch(core).toFixed(1);
-  document.getElementById("y").textContent   = api.yaw(core).toFixed(1);
-  document.getElementById("thr").textContent = api.thr(core).toFixed(1);
-  renderer.render(scene, camera);
+
+    tree.position.set(Math.cos(angle) * r, 0, Math.sin(angle) * r);
+    const scale = 0.75 + Math.random() * 0.5;
+    tree.scale.set(scale, scale, scale);
+    pineTreeGroup.add(tree);
+}
+scene.add(pineTreeGroup);
+
+// ----------------------------------------------------------------------------
+// Tactical Heated Winter Helipad with Black 'H' (LZ-01)
+// ----------------------------------------------------------------------------
+const padTex = GarudaTextureGenerator ? GarudaTextureGenerator.createLaunchPadTexture() : null;
+const padGeo = new THREE.CircleGeometry(1.65, 64);
+const padMat = new THREE.MeshStandardMaterial({
+    map: padTex ? padTex.diffuse : null,
+    color: 0xffffff,
+    roughness: 0.45,
+    metalness: 0.15,
+    transparent: true,
+    side: THREE.DoubleSide
+});
+const padMesh = new THREE.Mesh(padGeo, padMat);
+padMesh.rotation.x = -Math.PI / 2;
+padMesh.position.y = 0.004;
+padMesh.receiveShadow = true;
+scene.add(padMesh);
+
+// ----------------------------------------------------------------------------
+// Dynamic 3D Falling Snow Particle System
+// ----------------------------------------------------------------------------
+const snowParticleCount = 650;
+const snowParticleGeo = new THREE.BufferGeometry();
+const snowPositions = new Float32Array(snowParticleCount * 3);
+const snowVelocities = [];
+
+for (let i = 0; i < snowParticleCount; i++) {
+    snowPositions[i * 3] = (Math.random() - 0.5) * 80;
+    snowPositions[i * 3 + 1] = Math.random() * 30;
+    snowPositions[i * 3 + 2] = (Math.random() - 0.5) * 80;
+    snowVelocities.push({
+        x: (Math.random() - 0.5) * 0.6 + 0.3, // Light crosswind
+        y: -0.8 - Math.random() * 0.9,       // Downward fall speed
+        z: (Math.random() - 0.5) * 0.4,
+        swaySpeed: 1.5 + Math.random() * 2.0,
+        swayOffset: Math.random() * Math.PI * 2
+    });
+}
+snowParticleGeo.setAttribute('position', new THREE.BufferAttribute(snowPositions, 3));
+
+const snowParticleMat = new THREE.PointsMaterial({
+    color: 0xffffff,
+    size: 0.10,
+    transparent: true,
+    opacity: 0.85,
+    blending: THREE.NormalBlending
+});
+const snowfallMesh = new THREE.Points(snowParticleGeo, snowParticleMat);
+scene.add(snowfallMesh);
+
+let snowTime = 0;
+function updateSnowfall(dt) {
+    snowTime += dt;
+    const pos = snowParticleGeo.attributes.position.array;
+    for (let i = 0; i < snowParticleCount; i++) {
+        const v = snowVelocities[i];
+        pos[i * 3] += (v.x + Math.sin(snowTime * v.swaySpeed + v.swayOffset) * 0.25) * dt;
+        pos[i * 3 + 1] += v.y * dt;
+        pos[i * 3 + 2] += v.z * dt;
+
+        // Reset snow flake when hitting ground
+        if (pos[i * 3 + 1] < 0.05) {
+            pos[i * 3 + 1] = 28 + Math.random() * 4;
+            pos[i * 3] = (Math.random() - 0.5) * 80;
+            pos[i * 3 + 2] = (Math.random() - 0.5) * 80;
+        }
+    }
+    snowParticleGeo.attributes.position.needsUpdate = true;
 }
 
-// ---------- UI ----------
-addEventListener("keydown", e => { keys[e.key.toLowerCase()] = true;
-  if (["arrowup","arrowdown","arrowleft","arrowright"].includes(e.key.toLowerCase())) e.preventDefault(); });
-addEventListener("keyup",   e => { keys[e.key.toLowerCase()] = false; });
-const $ = id => document.getElementById(id);
-$("armBtn").onclick = () => { armed = !armed; api.arm(core, armed?1:0);
-  $("armed").textContent = armed?"ARMED":"DISARMED"; $("armBtn").classList.toggle("on",armed); $("armBtn").textContent = armed?"Disarm":"Arm"; };
-$("resetBtn").onclick = () => { kb.throttle=0; api.reset(core,0,2,0); if(armed) api.arm(core,1); };
-$("kbBtn").onclick = () => { mode="keyboard"; running=false; $("mode").textContent="keyboard"; $("kbBtn").classList.add("on"); $("scriptBtn").classList.remove("on"); };
-$("scriptBtn").onclick = () => { mode="script"; $("mode").textContent="script"; $("scriptBtn").classList.add("on"); $("kbBtn").classList.remove("on"); };
-$("runBtn").onclick = () => {
-  $("err").textContent = "";
-  try { userFn = new Function("return (" + $("code").value + "\n; control)")(); mode="script";
-        $("mode").textContent="script"; $("scriptBtn").classList.add("on"); $("kbBtn").classList.remove("on");
-        api.reset(core,0,2,0); api.arm(core,1); armed=true; $("armed").textContent="ARMED"; }
-  catch(e){ $("err").textContent = e.message; }
+// ----------------------------------------------------------------------------
+// Instantiate 3D Tactical Military Recon UAV ("GARUDA-01")
+// ----------------------------------------------------------------------------
+const octoModel = new GarudaOctocopterModel(scene);
+window.GarudaClient.octoModel = octoModel;
+
+// ----------------------------------------------------------------------------
+// Prop-Wash Snow Powder Downwash Particle System
+// ----------------------------------------------------------------------------
+const particleCount = 240;
+const particleGeo = new THREE.BufferGeometry();
+const particlePositions = new Float32Array(particleCount * 3);
+const particleVelocities = [];
+
+for (let i = 0; i < particleCount; i++) {
+    particlePositions[i * 3] = 0;
+    particlePositions[i * 3 + 1] = -10;
+    particlePositions[i * 3 + 2] = 0;
+    particleVelocities.push({
+        x: (Math.random() - 0.5) * 2.0,
+        y: Math.random() * 0.4 + 0.1,
+        z: (Math.random() - 0.5) * 2.0,
+        life: Math.random(),
+        maxLife: 0.5 + Math.random() * 0.4
+    });
+}
+particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+
+const particleMat = new THREE.PointsMaterial({
+    color: 0xf0f6ff, // Pure white powder snow
+    size: 0.10,
+    transparent: true,
+    opacity: 0.0,
+    blending: THREE.NormalBlending
+});
+const propWashParticles = new THREE.Points(particleGeo, particleMat);
+scene.add(propWashParticles);
+
+function updatePropWash(dt) {
+    const dPos = octoModel.rootGroup.position;
+    const agl = dPos.y - 0.38;
+    const isArmed = window.GarudaFlight && window.GarudaFlight.armed;
+    const avgRpm = (window.GarudaFlight && window.GarudaFlight.motorRpms) 
+        ? window.GarudaFlight.motorRpms.reduce((a, b) => a + b, 0) / 4.0 
+        : 0;
+
+    const positions = particleGeo.attributes.position.array;
+
+    if (!isArmed || avgRpm < 600 || agl > 3.2) {
+        particleMat.opacity = Math.max(0, particleMat.opacity - dt * 2.5);
+        return;
+    }
+
+    const intensity = Math.min(1.0, (avgRpm / 3200) * Math.max(0.1, (3.2 - agl) / 3.2));
+    particleMat.opacity = intensity * 0.75;
+
+    for (let i = 0; i < particleCount; i++) {
+        const v = particleVelocities[i];
+        v.life += dt;
+
+        if (v.life >= v.maxLife) {
+            v.life = 0;
+            const angle = Math.random() * Math.PI * 2;
+            const r = 0.25 + Math.random() * 0.85;
+            positions[i * 3] = dPos.x + Math.cos(angle) * r;
+            positions[i * 3 + 1] = Math.max(0.01, 0.02 + Math.random() * 0.06);
+            positions[i * 3 + 2] = dPos.z + Math.sin(angle) * r;
+
+            const speed = (2.2 + Math.random() * 4.5) * intensity;
+            v.x = Math.cos(angle + 0.35) * speed;
+            v.y = (0.25 + Math.random() * 0.6) * intensity;
+            v.z = Math.sin(angle + 0.35) * speed;
+        } else {
+            positions[i * 3] += v.x * dt;
+            positions[i * 3 + 1] += v.y * dt;
+            positions[i * 3 + 2] += v.z * dt;
+            v.y -= 2.2 * dt;
+            if (positions[i * 3 + 1] < 0.01) positions[i * 3 + 1] = 0.01;
+        }
+    }
+    particleGeo.attributes.position.needsUpdate = true;
+}
+
+// ----------------------------------------------------------------------------
+// Visual RTL Return-To-Launch Trajectory Guidance Beam
+// ----------------------------------------------------------------------------
+const rtlLineGeo = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(0, 0, 0),
+    new THREE.Vector3(0, 0, 0)
+]);
+const rtlLineMat = new THREE.LineDashedMaterial({
+    color: 0x00f0ff,
+    dashSize: 0.3,
+    gapSize: 0.15,
+    transparent: true,
+    opacity: 0.0
+});
+const rtlLine = new THREE.Line(rtlLineGeo, rtlLineMat);
+rtlLine.computeLineDistances();
+scene.add(rtlLine);
+
+function updateRtlVisual() {
+    if (window.GarudaFlight && window.GarudaFlight.isLanding) {
+        const dPos = octoModel.rootGroup.position;
+        const pts = [
+            new THREE.Vector3(dPos.x, dPos.y, dPos.z),
+            new THREE.Vector3(0, 0.02, 0)
+        ];
+        rtlLine.geometry.setFromPoints(pts);
+        rtlLine.computeLineDistances();
+        rtlLineMat.opacity = 0.85;
+    } else {
+        rtlLineMat.opacity = 0.0;
+    }
+}
+
+// ----------------------------------------------------------------------------
+// Motor Failure Smoke & Fire Spark Particle System
+// ----------------------------------------------------------------------------
+const smokeParticleCount = 120;
+const smokeGeo = new THREE.BufferGeometry();
+const smokePositions = new Float32Array(smokeParticleCount * 3);
+const smokeVelocities = [];
+
+for (let i = 0; i < smokeParticleCount; i++) {
+    smokePositions[i * 3] = 0;
+    smokePositions[i * 3 + 1] = -10;
+    smokePositions[i * 3 + 2] = 0;
+    smokeVelocities.push({
+        x: 0,
+        y: 0.5 + Math.random() * 0.8,
+        z: 0,
+        life: Math.random(),
+        maxLife: 0.7 + Math.random() * 0.4
+    });
+}
+smokeGeo.setAttribute('position', new THREE.BufferAttribute(smokePositions, 3));
+
+const smokeMat = new THREE.PointsMaterial({
+    color: 0x444444,
+    size: 0.18,
+    transparent: true,
+    opacity: 0.0,
+    blending: THREE.NormalBlending
+});
+const smokeParticles = new THREE.Points(smokeGeo, smokeMat);
+scene.add(smokeParticles);
+
+function updateMotorFailureFX(dt) {
+    if (!window.GarudaFlight) return;
+    const motorHealth = window.GarudaFlight.motorHealth || [];
+    const failedIndices = [];
+    for (let i = 0; i < 8; i++) {
+        if (motorHealth[i] === 2) failedIndices.push(i);
+    }
+
+    if (failedIndices.length === 0) {
+        smokeMat.opacity = Math.max(0, smokeMat.opacity - dt * 3.0);
+        return;
+    }
+
+    smokeMat.opacity = 0.85;
+    const dPos = octoModel.rootGroup.position;
+    const dRot = window.GarudaFlight.rotationEuler;
+    const yawRad = (dRot.yaw || 0) * (Math.PI / 180.0);
+    const armLength = 0.55;
+    const armAngles = [22.5, 67.5, 112.5, 157.5, 202.5, 247.5, 292.5, 337.5];
+
+    const positions = smokeGeo.attributes.position.array;
+
+    for (let i = 0; i < smokeParticleCount; i++) {
+        const v = smokeVelocities[i];
+        v.life += dt;
+
+        if (v.life >= v.maxLife) {
+            v.life = 0;
+            const failIdx = failedIndices[Math.floor(Math.random() * failedIndices.length)];
+            const armAngleRad = (armAngles[failIdx] * Math.PI / 180.0) + yawRad;
+            const mx = dPos.x + Math.cos(armAngleRad) * armLength;
+            const mz = dPos.z + Math.sin(armAngleRad) * armLength;
+            const my = dPos.y + 0.05;
+
+            positions[i * 3] = mx + (Math.random() - 0.5) * 0.06;
+            positions[i * 3 + 1] = my + Math.random() * 0.06;
+            positions[i * 3 + 2] = mz + (Math.random() - 0.5) * 0.06;
+
+            v.x = (Math.random() - 0.5) * 0.35;
+            v.y = 0.7 + Math.random() * 0.9;
+            v.z = (Math.random() - 0.5) * 0.35;
+        } else {
+            positions[i * 3] += v.x * dt;
+            positions[i * 3 + 1] += v.y * dt;
+            positions[i * 3 + 2] += v.z * dt;
+        }
+    }
+    smokeGeo.attributes.position.needsUpdate = true;
+}
+
+// ----------------------------------------------------------------------------
+// Catastrophic Crash Destruction Visual FX: Sparks, Shockwave & Screen Shake
+// ----------------------------------------------------------------------------
+let screenShakeIntensity = 0.0;
+
+// Shockwave Ring Mesh on Ground
+const shockwaveGeo = new THREE.RingGeometry(0.2, 0.45, 32);
+shockwaveGeo.rotateX(-Math.PI / 2);
+const shockwaveMat = new THREE.MeshBasicMaterial({
+    color: 0xffaa00,
+    transparent: true,
+    opacity: 0.0,
+    side: THREE.DoubleSide
+});
+const shockwaveMesh = new THREE.Mesh(shockwaveGeo, shockwaveMat);
+shockwaveMesh.position.set(0, 0.02, 0);
+scene.add(shockwaveMesh);
+let shockwaveActive = false;
+let shockwaveScale = 1.0;
+
+// Explosion Fiery Sparks
+const sparkCount = 80;
+const sparkGeo = new THREE.BufferGeometry();
+const sparkPositions = new Float32Array(sparkCount * 3);
+const sparkVelocities = [];
+
+for (let i = 0; i < sparkCount; i++) {
+    sparkPositions[i * 3] = 0;
+    sparkPositions[i * 3 + 1] = -10;
+    sparkPositions[i * 3 + 2] = 0;
+    sparkVelocities.push({ x: 0, y: 0, z: 0, life: 1, maxLife: 0.6 });
+}
+sparkGeo.setAttribute('position', new THREE.BufferAttribute(sparkPositions, 3));
+
+const sparkMat = new THREE.PointsMaterial({
+    color: 0xff7700,
+    size: 0.12,
+    transparent: true,
+    opacity: 0.0,
+    blending: THREE.AdditiveBlending
+});
+const sparkParticles = new THREE.Points(sparkGeo, sparkMat);
+scene.add(sparkParticles);
+
+window.triggerCrashVFX = function(crashPos) {
+    screenShakeIntensity = 0.48;
+
+    // Trigger Shockwave Ring
+    shockwaveMesh.position.set(crashPos.x, 0.02, crashPos.z);
+    shockwaveScale = 0.5;
+    shockwaveMesh.scale.set(shockwaveScale, shockwaveScale, shockwaveScale);
+    shockwaveMat.opacity = 0.95;
+    shockwaveActive = true;
+
+    // Burst Sparks
+    sparkMat.opacity = 1.0;
+    const posArr = sparkGeo.attributes.position.array;
+    for (let i = 0; i < sparkCount; i++) {
+        posArr[i * 3] = crashPos.x;
+        posArr[i * 3 + 1] = 0.2 + Math.random() * 0.1;
+        posArr[i * 3 + 2] = crashPos.z;
+
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 2.0 + Math.random() * 5.0;
+        sparkVelocities[i] = {
+            x: Math.cos(angle) * speed,
+            y: 1.5 + Math.random() * 3.5,
+            z: Math.sin(angle) * speed,
+            life: 0,
+            maxLife: 0.4 + Math.random() * 0.4
+        };
+    }
+    sparkGeo.attributes.position.needsUpdate = true;
 };
+
+function updateCrashVFX(dt) {
+    // 1. Debris Physics Update
+    if (octoModel && octoModel.updateDebris) {
+        octoModel.updateDebris(dt);
+    }
+
+    // 2. Shockwave Expansion
+    if (shockwaveActive) {
+        shockwaveScale += dt * 8.5;
+        shockwaveMesh.scale.set(shockwaveScale, shockwaveScale, shockwaveScale);
+        shockwaveMat.opacity = Math.max(0, shockwaveMat.opacity - dt * 2.2);
+        if (shockwaveMat.opacity <= 0) shockwaveActive = false;
+    }
+
+    // 3. Sparks Update
+    if (sparkMat.opacity > 0) {
+        const posArr = sparkGeo.attributes.position.array;
+        let anyAlive = false;
+        for (let i = 0; i < sparkCount; i++) {
+            const v = sparkVelocities[i];
+            v.life += dt;
+            if (v.life < v.maxLife) {
+                anyAlive = true;
+                v.y -= 9.8 * dt;
+                posArr[i * 3] += v.x * dt;
+                posArr[i * 3 + 1] += v.y * dt;
+                posArr[i * 3 + 2] += v.z * dt;
+                if (posArr[i * 3 + 1] < 0.02) {
+                    posArr[i * 3 + 1] = 0.02;
+                    v.y = -v.y * 0.3;
+                    v.x *= 0.6;
+                    v.z *= 0.6;
+                }
+            }
+        }
+        sparkGeo.attributes.position.needsUpdate = true;
+        if (!anyAlive) sparkMat.opacity = Math.max(0, sparkMat.opacity - dt * 3.0);
+    }
+}
+
+// ----------------------------------------------------------------------------
+// Camera Modes Management (Orbit, Follow Chase Cam, Cockpit FPV, Gimbal)
+// ----------------------------------------------------------------------------
+let currentCameraMode = 'orbit';
+
+function setCameraMode(mode) {
+    currentCameraMode = mode;
+    ['orbit', 'chase', 'fpv', 'gimbal'].forEach(m => {
+        const btn = document.getElementById(`cam-${m}-btn`);
+        if (btn) {
+            if (m === mode) btn.classList.add('btn-primary');
+            else btn.classList.remove('btn-primary');
+        }
+    });
+    if (window.GarudaAudio) window.GarudaAudio.playUiClick();
+}
+setCameraMode('orbit');
+
+function updateCameraTracking() {
+    const dPos = octoModel.rootGroup.position;
+    const dRot = window.GarudaFlight.rotationEuler;
+    const yawRad = (dRot.yaw || 0) * (Math.PI / 180.0);
+    const pitchRad = (dRot.pitch || 0) * (Math.PI / 180.0);
+
+    if (currentCameraMode === 'orbit') {
+        if (controls) {
+            controls.enabled = true;
+            controls.target.lerp(new THREE.Vector3(dPos.x, dPos.y + 0.35, dPos.z), 0.12);
+        }
+    } else if (currentCameraMode === 'chase') {
+        if (controls) controls.enabled = false;
+        const dist = 2.6;
+        const height = 1.2;
+        // Spring arm chase positioning
+        const targetCamX = dPos.x - Math.sin(yawRad) * dist;
+        const targetCamZ = dPos.z - Math.cos(yawRad) * dist;
+        const targetCamY = dPos.y + height;
+
+        camera.position.lerp(new THREE.Vector3(targetCamX, targetCamY, targetCamZ), 0.09);
+        const lookTarget = new THREE.Vector3(dPos.x + Math.sin(yawRad) * 0.4, dPos.y + 0.3, dPos.z + Math.cos(yawRad) * 0.4);
+        camera.lookAt(lookTarget);
+    } else if (currentCameraMode === 'fpv') {
+        if (controls) controls.enabled = false;
+        const noseX = dPos.x + Math.sin(yawRad) * 0.25;
+        const noseZ = dPos.z + Math.cos(yawRad) * 0.25;
+        camera.position.set(noseX, dPos.y + 0.12, noseZ);
+
+        const lookX = noseX + Math.sin(yawRad) * 6.0;
+        const lookZ = noseZ + Math.cos(yawRad) * 6.0;
+        camera.lookAt(lookX, dPos.y + 0.12, lookZ);
+    } else if (currentCameraMode === 'gimbal') {
+        if (controls) controls.enabled = false;
+        camera.position.set(dPos.x, dPos.y - 0.15, dPos.z);
+        camera.lookAt(dPos.x, dPos.y - 6.0, dPos.z);
+    }
+
+    // Impact Screen Shake Impulse
+    if (screenShakeIntensity > 0.001) {
+        camera.position.x += (Math.random() - 0.5) * screenShakeIntensity;
+        camera.position.y += (Math.random() - 0.5) * screenShakeIntensity;
+        camera.position.z += (Math.random() - 0.5) * screenShakeIntensity;
+        screenShakeIntensity *= Math.exp(-0.016 * 9.0);
+    }
+}
+
+// ----------------------------------------------------------------------------
+// Audio Controls
+// ----------------------------------------------------------------------------
+function toggleAudio() {
+    if (window.GarudaAudio) {
+        const isMuted = window.GarudaAudio.toggleMute();
+        const btn = document.getElementById('audio-toggle-btn');
+        if (btn) {
+            btn.textContent = isMuted ? '🔇 AUDIO: MUTED' : '🔊 AUDIO: ON';
+            btn.style.borderColor = isMuted ? '#ff3366' : 'var(--accent-cyan)';
+        }
+    }
+}
+
+// ----------------------------------------------------------------------------
+// UI Card Popout Toggles (Left Corner)
+// ----------------------------------------------------------------------------
+function toggleLeftCard(cardId, buttonElem) {
+    const card = document.getElementById(cardId);
+    if (!card) return;
+
+    const isVisible = card.style.display === 'block';
+    card.style.display = isVisible ? 'none' : 'block';
+
+    const pillBtn = buttonElem || document.getElementById(`btn-toggle-${cardId.replace('card-', '')}`);
+    if (pillBtn) {
+        if (!isVisible) pillBtn.classList.add('active');
+        else pillBtn.classList.remove('active');
+    }
+    if (window.GarudaAudio) window.GarudaAudio.playUiClick();
+}
+
+function toggleAllLeftCards() {
+    const cards = document.querySelectorAll('.info-popout-card');
+    let anyOpen = false;
+    cards.forEach(c => { if (c.style.display === 'block') anyOpen = true; });
+
+    cards.forEach(c => {
+        c.style.display = anyOpen ? 'none' : 'block';
+        const pill = document.getElementById(`btn-toggle-${c.id.replace('card-', '')}`);
+        if (pill) {
+            if (!anyOpen) pill.classList.add('active');
+            else pill.classList.remove('active');
+        }
+    });
+    if (window.GarudaAudio) window.GarudaAudio.playUiClick();
+}
+
+// ----------------------------------------------------------------------------
+// Keyboard Visualizer Link
+// ----------------------------------------------------------------------------
+if (window.GarudaFlight) {
+    window.GarudaFlight.setKeyChangeCallback((code, isPressed) => {
+        const el = document.getElementById(`key-${code}`);
+        if (el) {
+            if (isPressed) el.classList.add('pressed');
+            else el.classList.remove('pressed');
+        }
+    });
+
+    // Enable direct clicking / touching on the Keyboard Command Map UI buttons
+    document.querySelectorAll('.key-cap').forEach(el => {
+        const code = el.id.replace('key-', '');
+        const press = (e) => {
+            e.preventDefault();
+            window.GarudaFlight.simulateKey(code, true);
+        };
+        const release = (e) => {
+            e.preventDefault();
+            window.GarudaFlight.simulateKey(code, false);
+        };
+        el.addEventListener('mousedown', press);
+        el.addEventListener('mouseup', release);
+        el.addEventListener('mouseleave', release);
+        el.addEventListener('touchstart', press, { passive: false });
+        el.addEventListener('touchend', release);
+        el.addEventListener('touchcancel', release);
+    });
+}
+
+// ----------------------------------------------------------------------------
+// Agility & Sensitivity Controls
+// ----------------------------------------------------------------------------
+function updateAgility(val) {
+    if (window.GarudaFlight) window.GarudaFlight.pitchRollAgility = parseFloat(val);
+    const label = document.getElementById('val-agility');
+    if (label) label.textContent = `${parseFloat(val).toFixed(1)}x (${(parseFloat(val) * 25).toFixed(0)}°)`;
+}
+
+function updateSensitivity(val) {
+    if (window.GarudaFlight) window.GarudaFlight.throttleSensitivity = parseFloat(val);
+    const label = document.getElementById('val-sensitivity');
+    if (label) label.textContent = `${parseFloat(val).toFixed(1)}x`;
+}
+
+function setFlightMode(mode) {
+    if (window.GarudaFlight) window.GarudaFlight.flightMode = mode;
+    ['alt', 'stab', 'pos'].forEach(m => {
+        const btn = document.getElementById(`mode-${m}-btn`);
+        if (btn) btn.style.borderColor = 'var(--border-subtle)';
+    });
+    const activeBtn = document.getElementById(`mode-${mode.toLowerCase().replace('_hold', '')}-btn`);
+    if (activeBtn) activeBtn.style.borderColor = 'var(--accent-cyan)';
+    if (window.GarudaAudio) window.GarudaAudio.playUiClick();
+}
+
+// ----------------------------------------------------------------------------
+// Gimbal Controls
+// ----------------------------------------------------------------------------
+function updateGimbal() {
+    const pitch = document.getElementById('gimbal-pitch-slider').value;
+    const yaw = document.getElementById('gimbal-yaw-slider').value;
+    document.getElementById('gimbal-pitch-val').textContent = `${pitch}°`;
+    document.getElementById('gimbal-yaw-val').textContent = `${yaw}°`;
+    window.GarudaClient.setGimbal(pitch, yaw, 1.0);
+}
+
+function setGimbalPreset(pitch, yaw) {
+    document.getElementById('gimbal-pitch-slider').value = pitch;
+    document.getElementById('gimbal-yaw-slider').value = yaw;
+    updateGimbal();
+}
+
+// ----------------------------------------------------------------------------
+// Raycasting Component Inspector
+// ----------------------------------------------------------------------------
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+window.addEventListener('click', (event) => {
+    if (event.target.closest('.panel') || event.target.closest('button') || event.target.closest('select') || event.target.closest('input')) {
+        return;
+    }
+
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObjects(octoModel.rootGroup.children, true);
+
+    if (intersects.length > 0) {
+        let hitMesh = intersects[0].object;
+        while (hitMesh && !hitMesh.userData.isInspectable && hitMesh.parent && hitMesh.parent !== octoModel.rootGroup) {
+            hitMesh = hitMesh.parent;
+        }
+
+        if (hitMesh && hitMesh.userData && hitMesh.userData.isInspectable) {
+            const meta = hitMesh.userData;
+            document.getElementById('inspect-name').textContent = meta.name;
+            document.getElementById('inspect-category').textContent = meta.category.toUpperCase();
+            document.getElementById('inspect-desc').textContent = meta.desc;
+            document.getElementById('component-inspector-modal').style.display = 'block';
+            if (window.GarudaAudio) window.GarudaAudio.playUiClick();
+        }
+    }
+});
+
+// ----------------------------------------------------------------------------
+// Animation & 400Hz Simulation Render Loop
+// ----------------------------------------------------------------------------
+let lastTimestamp = performance.now();
+
+function animate(timestamp) {
+    requestAnimationFrame(animate);
+
+    const dt = Math.min((timestamp - lastTimestamp) / 1000.0, 0.05);
+    lastTimestamp = timestamp;
+
+    if (window.GarudaFlight) {
+        window.GarudaFlight.step(dt);
+    }
+
+    updateSnowfall(dt);
+    updatePropWash(dt);
+    updateRtlVisual();
+    updateMotorFailureFX(dt);
+    updateCrashVFX(dt);
+    updateCameraTracking();
+    if (controls && controls.enabled) controls.update();
+    renderer.render(scene, camera);
+}
+requestAnimationFrame(animate);
+
+// Resize Handler
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
 </script>
+
 </body>
 </html>
