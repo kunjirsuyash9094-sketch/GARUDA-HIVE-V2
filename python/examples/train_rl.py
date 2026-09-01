@@ -1,6 +1,6 @@
 """Train a hover policy with PPO (stable-baselines3).
 
-    pip install "skysim[rl]"
+    pip install "garuda[rl]"
     godot --headless demo/agent_server.tscn -- --port 5557
     python examples/train_rl.py --timesteps 200000
 """
@@ -18,11 +18,11 @@ def main():
         from stable_baselines3 import PPO
         from stable_baselines3.common.env_checker import check_env
     except ImportError:
-        raise SystemExit("Install RL extras: pip install 'skysim[rl]'")
+        raise SystemExit("Install RL extras: pip install 'garuda[rl]'")
 
-    from skysim import SkySimEnv, HoverTask
+    from garuda import GarudaEnv, HoverTask
 
-    env = SkySimEnv(port=args.port, task=HoverTask(target=(0.0, 3.0, 0.0)), max_steps=1500)
+    env = GarudaEnv(port=args.port, task=HoverTask(target=(0.0, 3.0, 0.0)), max_steps=1500)
     check_env(env, warn=True)   # validates the Gym interface
 
     model = PPO("MlpPolicy", env, verbose=1)

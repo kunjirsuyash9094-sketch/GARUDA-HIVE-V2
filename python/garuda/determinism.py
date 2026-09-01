@@ -12,7 +12,7 @@ This harness is how you verify a given build/config actually reproduces.
 from __future__ import annotations
 
 import numpy as np
-from .env import SkySimEnv
+from .env import GarudaEnv
 from .tasks import HoverTask
 
 
@@ -38,9 +38,9 @@ def check_determinism(port: int = 5557, host: str = "127.0.0.1",
     actions = [rng.uniform([-1, -1, -1, 0], [1, 1, 1, 1]).astype(np.float32)
                for _ in range(steps)]
 
-    e1 = SkySimEnv(host=host, port=port, task=HoverTask(), max_steps=steps)
+    e1 = GarudaEnv(host=host, port=port, task=HoverTask(), max_steps=steps)
     t1 = _rollout(e1, actions, seed); e1.close()
-    e2 = SkySimEnv(host=host, port=port, task=HoverTask(), max_steps=steps)
+    e2 = GarudaEnv(host=host, port=port, task=HoverTask(), max_steps=steps)
     t2 = _rollout(e2, actions, seed); e2.close()
 
     n = min(len(t1), len(t2))

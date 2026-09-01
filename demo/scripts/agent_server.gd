@@ -49,7 +49,7 @@ func _ready() -> void:
 	if err != OK:
 		push_error("agent_server: could not listen on port %d (err %d)" % [port, err])
 		return
-	print("SkySim agent server listening on ws://127.0.0.1:%d" % port)
+	print("Garuda Hive agent server listening on ws://127.0.0.1:%d" % port)
 
 func _physics_process(_delta: float) -> void:
 	if _ws == null:

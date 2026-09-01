@@ -1,5 +1,5 @@
 #pragma once
-// DroneCore — the SkySim physics, decoupled from Godot.
+// DroneCore — the Garuda Hive physics, decoupled from Godot.
 // Reuses the exact pure subsystems (blade element, atmosphere, aero effects,
 // flight controller, mixer) and adds a standalone 6-DOF integrator in place of
 // Godot's RigidBody3D. Compiles natively and to WebAssembly (Emscripten).

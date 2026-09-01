@@ -1,5 +1,5 @@
 /**
- * SkySim Pure JS Physics Core
+ * Garuda Hive Pure JS Physics Core
  * High-fidelity 6-DOF drone dynamics with Blade Element Theory (BET),
  * ISA Atmosphere, Dryden Turbulence, Cheeseman-Bennett Ground Effect,
  * Leishman Vortex Ring State (VRS), Cascade PID Flight Controller,
@@ -469,9 +469,9 @@
   }
 
   // ---------------------------------------------------------------------------
-  // SkySim Core (6-DOF Integrator & Full Drone Model)
+  // Garuda Hive Core (6-DOF Integrator & Full Drone Model)
   // ---------------------------------------------------------------------------
-  class SkySimCore {
+  class GarudaPhysicsCore {
     constructor() {
       this.mass = 1.5; // kg
       this.rotorRadius = 0.127; // m
@@ -828,8 +828,8 @@
   }
 
   // Export to global scope
-  global.SkySim = {
-    Core: SkySimCore,
+  global.Garuda = {
+    Core: GarudaPhysicsCore,
     Vec3,
     Quat,
     Frames,
@@ -840,3 +840,6 @@
   };
 
 })(typeof window !== 'undefined' ? window : this);
+
+global.GarudaHive = global.Garuda;
+global.GarudaPhysicsCore = GarudaPhysicsCore;

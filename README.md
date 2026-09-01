@@ -1,4 +1,4 @@
-# SkySim — open-source drone simulator
+# Garuda Hive — open-source drone simulator
 
 A cross-platform drone simulator with real aerodynamics computed in C++20, and
 the ability to hand the vehicle to actual flight-controller firmware —
@@ -9,7 +9,7 @@ in the hot path**. Runs on Windows, Linux, and macOS (Intel + Apple Silicon).
 
 ## Status
 
-SkySim now spans the full stack from a fly-it-yourself sim to a browser tier and
+Garuda Hive now spans the full stack from a fly-it-yourself sim to a browser tier and
 a benchmark suite. What's **tested end-to-end**: the Python agent interface,
 perception, data pipeline, benchmarks, and determinism harness; the Godot agent
 server, perception, and domain randomization (validated against Godot 4.3); and
@@ -20,7 +20,7 @@ RGB rendering, cross-machine determinism numbers, and — the one thing no code 
 produce — a **sim-to-real transfer result** (see `docs/sim_to_real.md`).
 
 The pitch, honestly stated: every simulator that lets you test drone algorithms
-needs Linux, ROS, or a game engine and a GPU. SkySim's goal is to make it a URL.
+needs Linux, ROS, or a game engine and a GPU. Garuda Hive's goal is to make it a URL.
 See [`ROADMAP.md`](ROADMAP.md) for phase-by-phase progress.
 
 ---
@@ -41,9 +41,9 @@ Grab a standalone build from the [**Releases**](../../releases) page:
 
 | Your OS | Download | How to run |
 |---------|----------|------------|
-| Windows | `SkySim-windows.zip` | Unzip, double-click `SkySim.exe` |
-| Linux | `SkySim-linux.zip` | Unzip, `chmod +x SkySim.x86_64`, run it |
-| macOS | `SkySim-macos.zip` | Unzip, right-click the app → **Open** (unsigned) |
+| Windows | `GarudaHive-windows.zip` | Unzip, double-click `garuda_sim.exe` |
+| Linux | `GarudaHive-linux.zip` | Unzip, `chmod +x GarudaHive.x86_64`, run it |
+| macOS | `GarudaHive-macos.zip` | Unzip, right-click the app → **Open** (unsigned) |
 
 No Godot, no compiler, no dependencies. Everything is bundled.
 
@@ -51,7 +51,7 @@ No Godot, no compiler, no dependencies. Everything is bundled.
 
 1. Install **[Godot 4.3+](https://godotengine.org/download)** — one portable
    download, no admin rights, no installer needed.
-2. From [Releases](../../releases), download `SkySim-godot-project.zip` and
+2. From [Releases](../../releases), download `GarudaHive-godot-project.zip` and
    unzip it. **Prebuilt extension binaries for every OS are already inside** —
    you don't compile anything.
 3. Open Godot → *Import* → select the unzipped folder → **Play**.
@@ -125,7 +125,7 @@ Control priority each physics tick: **SITL firmware** (fresh actuator frame
 
 ---
 
-## Using SkySim in your own Godot project
+## Using Garuda Hive in your own Godot project
 
 1. Copy the `gdextension/` folder into your project root (Godot 4 auto-detects
    it — no plugin to enable).
@@ -156,7 +156,7 @@ cd PX4-Autopilot && make px4_sitl none_iris
 cd betaflight && make TARGET=SITL && ./obj/main/betaflight_SITL.elf
 ```
 
-Run the SkySim scene first, then start the firmware. Arming, modes, and
+Run the Garuda Hive scene first, then start the firmware. Arming, modes, and
 missions come from your GCS (Mission Planner / QGroundControl). Frames are
 aerospace-standard (NED world / FRD body, see `include/core/frames.hpp`); rotor
 order follows the ArduPilot/PX4 quad-X convention.

@@ -1,4 +1,4 @@
-"""Run the SkySim benchmark suite against a policy and save a scorecard.
+"""Run the Garuda Hive benchmark suite against a policy and save a scorecard.
 
     godot --headless demo/gps_denied_nav.tscn -- --port 5557   # (or per-task scene)
     python examples/run_benchmark.py --port 5557 --out scorecard.json
@@ -7,7 +7,7 @@ Bring your own policy by editing `make_policy()`, or import your trained model.
 """
 import argparse
 import numpy as np
-from skysim import run_suite, save_scorecard
+from garuda import run_suite, save_scorecard
 
 
 class BaselinePolicy:

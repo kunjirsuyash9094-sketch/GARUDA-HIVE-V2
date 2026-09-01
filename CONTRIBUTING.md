@@ -1,6 +1,6 @@
-# Contributing to SkySim
+# Contributing to Garuda Hive
 
-Thanks for helping build an open, accessible drone simulator. SkySim is a
+Thanks for helping build an open, accessible drone simulator. Garuda Hive is a
 community project — contributions of code, docs, examples, bug reports, and
 test scenarios are all welcome.
 

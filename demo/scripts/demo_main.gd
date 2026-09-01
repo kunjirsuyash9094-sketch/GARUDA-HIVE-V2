@@ -14,7 +14,7 @@ var _elapsed := 0.0
 var _since_print := 0.0
 
 func _ready() -> void:
-	print("[demo] SkySim SITL live demo starting")
+	print("[demo] Garuda Hive SITL live demo starting")
 	print("[demo] physics_ticks_per_second=%d" % Engine.physics_ticks_per_second)
 	sitl.enabled_ardupilot = true
 	sitl.port_ardupilot = 9002

@@ -1,4 +1,4 @@
-"""Reference MOCK agent server (pure Python) speaking the SkySim agent protocol,
+"""Reference MOCK agent server (pure Python) speaking the Garuda Hive agent protocol,
 including Phase-2 depth + RGB payloads. Executable spec of docs/agent_protocol.md.
 
     python tests/mock_server.py --port 5557

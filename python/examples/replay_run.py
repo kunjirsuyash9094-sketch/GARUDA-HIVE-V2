@@ -3,7 +3,7 @@
     python examples/replay_run.py runs/run_XXced_seed0 --port 5557
 """
 import argparse
-from skysim import SkySimEnv, NavTask, replay_run, load_run
+from garuda import GarudaEnv, NavTask, replay_run, load_run
 
 
 def main():
@@ -13,7 +13,7 @@ def main():
     args = ap.parse_args()
 
     m = load_run(args.run_dir)["manifest"]
-    env = SkySimEnv(port=args.port, task=NavTask(),
+    env = GarudaEnv(port=args.port, task=NavTask(),
                     state_mode=m["state_mode"], include_depth=m["include_depth"],
                     max_steps=m["n_steps"] + 5)
     result = replay_run(args.run_dir, env)

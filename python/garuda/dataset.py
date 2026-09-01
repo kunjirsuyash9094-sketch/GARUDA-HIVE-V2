@@ -11,7 +11,7 @@ import numpy as np
 from .record import load_run
 
 
-class SkySimDataset:
+class GarudaDataset:
     """Imitation-learning view over one or more recorded runs.
 
     Yields (observation, action) pairs. Observation is the state vector, plus
@@ -56,6 +56,9 @@ class SkySimDataset:
         return obs, self._act
 
 
+GarudaHiveDataset = GarudaDataset
+
+
 def _discover(root):
     root = Path(root)
     return sorted(p.parent for p in root.rglob("manifest.json"))
@@ -66,7 +69,7 @@ def make_torch_dataset(run_dirs, keys=("state", "depth")):
     import torch
     from torch.utils.data import Dataset
 
-    base = SkySimDataset(run_dirs, keys=keys)
+    base = GarudaDataset(run_dirs, keys=keys)
 
     class TorchRunDataset(Dataset):
         def __len__(self):

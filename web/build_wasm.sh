@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# Build the SkySim physics core to WebAssembly. Requires Emscripten (emcc).
+# Build the Garuda Hive physics core to WebAssembly. Requires Emscripten (emcc).
 # Install: https://emscripten.org/docs/getting_started/downloads.html
 set -e
 cd "$(dirname "$0")/.."
 mkdir -p web/public
 emcc -std=c++20 -O3 -I include web/core/drone_core.cpp web/core/capi.cpp \
-  -o web/public/skysim_core.js \
-  -sMODULARIZE=1 -sEXPORT_NAME=SkySimCore \
+  -o web/public/garuda_core.js \
+  -sMODULARIZE=1 -sEXPORT_NAME=GarudaCore \
   -sEXPORTED_RUNTIME_METHODS='["ccall","cwrap","HEAPF64"]' \
-  -sEXPORTED_FUNCTIONS='["_skysim_create","_skysim_destroy","_skysim_reset","_skysim_arm","_skysim_set_attitude","_skysim_set_motors","_skysim_set_wind","_skysim_step","_skysim_get_obs","_skysim_altitude","_skysim_vspeed","_skysim_thrust","_skysim_roll","_skysim_pitch","_skysim_yaw","_malloc","_free"]' \
+  -sEXPORTED_FUNCTIONS='["_garuda_create","_garuda_destroy","_garuda_reset","_garuda_arm","_garuda_set_attitude","_garuda_set_motors","_garuda_set_wind","_garuda_step","_garuda_get_obs","_garuda_altitude","_garuda_vspeed","_garuda_thrust","_garuda_roll","_garuda_pitch","_garuda_yaw","_malloc","_free"]' \
   -sALLOW_MEMORY_GROWTH=1 -sENVIRONMENT=web
-echo "built -> web/public/skysim_core.js + skysim_core.wasm"
+echo "built -> web/public/garuda_core.js + garuda_core.wasm"

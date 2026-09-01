@@ -14,8 +14,8 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 
 [application]
 
-config/name="SkySim"
-config/description="Open-source drone simulator with C++ aerodynamics and ArduPilot/PX4/Betaflight SITL."
+config/name="Garuda Hive"
+config/description="Garuda Hive drone simulator with C++ aerodynamics and ArduPilot/PX4/Betaflight SITL."
 run/main_scene="res://demo/free_flight.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"

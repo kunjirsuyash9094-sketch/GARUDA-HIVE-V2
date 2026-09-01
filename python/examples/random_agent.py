@@ -3,7 +3,7 @@ No ML deps. Start the server first:
     godot --headless demo/agent_server.tscn -- --port 5557
 """
 import argparse
-from skysim import SkySimEnv, HoverTask
+from garuda import GarudaEnv, HoverTask
 
 
 def main():
@@ -12,7 +12,7 @@ def main():
     ap.add_argument("--steps", type=int, default=200)
     args = ap.parse_args()
 
-    env = SkySimEnv(port=args.port, task=HoverTask())
+    env = GarudaEnv(port=args.port, task=HoverTask())
     obs, info = env.reset(seed=0)
     print("reset ok, obs dim:", obs.shape)
     ret = 0.0

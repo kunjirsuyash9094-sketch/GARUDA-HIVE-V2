@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-SkySim Localhost Web Server
-Serves the SkySim web simulator on http://localhost:8000
+Garuda Hive Localhost Web Server
+Serves the Garuda Hive web simulator on http://localhost:8000
 """
 
 import http.server
@@ -58,7 +58,7 @@ def run_server(port=PORT):
 
     url = f"http://localhost:{current_port}"
     print("=" * 65)
-    print(f"[*] SkySim Drone Simulator is live on localhost!")
+    print(f"[*] Garuda Hive Drone Simulator is live on localhost!")
     print(f"[*] URL: {url}")
     print(f"[*] Serving directory: {WEB_DIR}")
     print(f"[*] Controls: W/S throttle, A/D yaw, Arrows pitch/roll, Space to arm")
@@ -67,7 +67,7 @@ def run_server(port=PORT):
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
-        print("\nStopping SkySim server...")
+        print("\nStopping Garuda Hive server...")
         httpd.server_close()
 
 

@@ -3,9 +3,9 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "skysim"
+name = "garuda"
 version = "0.1.0"
-description = "Python client + Gymnasium env for the SkySim drone simulator"
+description = "Python client + Gymnasium env for the Garuda Hive drone simulator"
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
@@ -20,4 +20,4 @@ rl = ["stable-baselines3>=2.0"]
 dev = ["websockets>=12", "pytest>=7"]
 
 [tool.setuptools.packages.find]
-include = ["skysim*"]
+include = ["garuda*"]

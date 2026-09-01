@@ -8,7 +8,7 @@ has the nearest obstacle in the depth image. Demonstrates the perception obs.
 """
 import argparse
 import numpy as np
-from skysim import SkySimEnv, NavTask
+from garuda import GarudaEnv, NavTask
 
 
 def main():
@@ -17,7 +17,7 @@ def main():
     ap.add_argument("--steps", type=int, default=3000)
     args = ap.parse_args()
 
-    env = SkySimEnv(
+    env = GarudaEnv(
         port=args.port, task=NavTask(goal=(0, 2, -40)),
         state_mode="gps_denied", include_depth=True, max_steps=args.steps,
     )

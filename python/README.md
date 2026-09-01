@@ -1,7 +1,7 @@
-# SkySim Python client
+# Garuda Hive Python client
 
 Point any control or RL algorithm at a simulated drone through a standard
-[Gymnasium](https://gymnasium.farama.org/) interface. Talks to a running SkySim
+[Gymnasium](https://gymnasium.farama.org/) interface. Talks to a running Garuda Hive
 instance over WebSocket (protocol: [`../docs/agent_protocol.md`](../docs/agent_protocol.md)).
 
 ## Install
@@ -23,9 +23,9 @@ godot --headless demo/agent_server.tscn -- --port 5557
 Then drive it:
 
 ```python
-from skysim import SkySimEnv, HoverTask
+from garuda import GarudaEnv, HoverTask
 
-env = SkySimEnv(port=5557, task=HoverTask(target=(0, 3, 0)))
+env = GarudaEnv(port=5557, task=HoverTask(target=(0, 3, 0)))
 obs, info = env.reset(seed=0)
 for _ in range(1000):
     action = env.action_space.sample()          # [roll, pitch, yaw_rate, throttle]
@@ -65,9 +65,9 @@ Record randomized episodes to disk, then load them for imitation learning or
 offline RL:
 
 ```python
-from skysim import SkySimEnv, NavTask, RecordRun, DomainRandomizer, SkySimDataset
+from garuda import GarudaEnv, NavTask, RecordRun, DomainRandomizer, GarudaDataset
 
-env = RecordRun(SkySimEnv(port=5557, task=NavTask(), state_mode="gps_denied",
+env = RecordRun(GarudaEnv(port=5557, task=NavTask(), state_mode="gps_denied",
                           include_depth=True), out_dir="runs")
 dr = DomainRandomizer(seed=1234)
 for ep in range(20):
@@ -77,7 +77,7 @@ for ep in range(20):
         obs, r, term, trunc, info = env.step(env.action_space.sample())
         done = term or trunc
 
-ds = SkySimDataset("runs", keys=("state", "depth"))   # imitation-learning pairs
+ds = GarudaDataset("runs", keys=("state", "depth"))   # imitation-learning pairs
 obs, action = ds[0]
 ```
 

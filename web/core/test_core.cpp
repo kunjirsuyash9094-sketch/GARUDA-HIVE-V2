@@ -13,7 +13,7 @@ static double run(double throttle, bool armed, double secs) {
 }
 
 int main(){
-    printf("== SkySim standalone core (decoupled from Godot) ==\n");
+    printf("== Garuda Hive standalone core (decoupled from Godot) ==\n");
     // 1. motors off -> falls to ground
     double y_off = run(0.0, false, 3.0);
     printf("disarmed 3s: alt=%.3f m  (expect ~ground 0.15)\n", y_off);

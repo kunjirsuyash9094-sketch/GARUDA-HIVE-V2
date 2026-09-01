@@ -4,8 +4,8 @@ A run is a per-episode directory containing dependency-light numpy arrays plus a
 JSON manifest — the raw material for imitation learning, offline RL, or
 sim-to-real dataset building.
 
-    from skysim import SkySimEnv, NavTask, RecordRun, DomainRandomizer
-    env = RecordRun(SkySimEnv(task=NavTask(), include_depth=True), out_dir="runs")
+    from garuda import GarudaEnv, NavTask, RecordRun, DomainRandomizer
+    env = RecordRun(GarudaEnv(task=NavTask(), include_depth=True), out_dir="runs")
     dr = DomainRandomizer(seed=0)
     obs, info = env.reset(seed=0, options={"randomize": dr.sample()})
     ...

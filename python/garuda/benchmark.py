@@ -11,7 +11,7 @@ from typing import Callable, Optional
 import json
 import numpy as np
 
-from .env import SkySimEnv
+from .env import GarudaEnv
 from .tasks import HoverTask, NavTask, WaypointTask
 
 
@@ -63,7 +63,7 @@ def run_benchmark(policy, bench: Benchmark, port: int = 5557,
     policy.reset() is called at each episode start if it exists."""
     episodes = []
     for seed in bench.seeds:
-        env = SkySimEnv(host=host, port=port, task=bench.make_task(),
+        env = GarudaEnv(host=host, port=port, task=bench.make_task(),
                         max_steps=bench.max_steps, **bench.env_kwargs)
         obs, info = env.reset(seed=seed)
         if hasattr(policy, "reset"):

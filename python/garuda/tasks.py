@@ -1,6 +1,6 @@
 """Tasks define reward and termination on top of the raw simulator.
 
-Keeping tasks separate from the sim keeps SkySim generic: the server just streams
+Keeping tasks separate from the sim keeps Garuda Hive generic: the server just streams
 state + ground truth, and the task decides what "good" means. Write your own by
 subclassing Task.
 """

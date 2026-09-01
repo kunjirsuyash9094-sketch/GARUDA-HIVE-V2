@@ -1,12 +1,12 @@
-"""SkySim Gymnasium environment.
+"""Garuda Hive Gymnasium environment.
 
-Connects to a running SkySim agent server (see docs/agent_protocol.md) over
+Connects to a running Garuda Hive agent server (see docs/agent_protocol.md) over
 WebSocket and exposes a standard Gymnasium interface.
 
 Observation is a plain Box (state only) by default. Enable perception to switch
 to a Dict space:
 
-    env = SkySimEnv(include_depth=True, state_mode="gps_denied",
+    env = GarudaEnv(include_depth=True, state_mode="gps_denied",
                     task=NavTask(goal=(0, 2, -40)))
     obs, info = env.reset(seed=0)   # obs = {"state": ..., "depth": ...}
 
@@ -29,7 +29,7 @@ try:
     import websocket  # from the 'websocket-client' package
 except ImportError as exc:  # pragma: no cover
     raise ImportError(
-        "SkySimEnv needs the 'websocket-client' package: pip install websocket-client"
+        "GarudaEnv needs the 'websocket-client' package: pip install websocket-client"
     ) from exc
 
 from .tasks import Task, HoverTask
@@ -37,8 +37,8 @@ from .tasks import Task, HoverTask
 STATE_DIMS = {"full": 12, "gps_denied": 9}
 
 
-class SkySimEnv(gym.Env):
-    """Gymnasium env backed by a SkySim agent server.
+class GarudaEnv(gym.Env):
+    """Gymnasium env backed by a Garuda Hive agent server.
 
     Action (Box, 4-d, normalised): [roll, pitch, yaw_rate, throttle].
     Observation:
@@ -212,3 +212,7 @@ class SkySimEnv(gym.Env):
             "gt_pos": msg.get("gt", {}).get("pos"),
             "dr": msg.get("dr"),
         }
+
+
+GarudaHiveEnv = GarudaEnv
+

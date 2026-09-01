@@ -1,9 +1,9 @@
-"""Report whether the running SkySim build reproduces trajectories.
+"""Report whether the running Garuda Hive build reproduces trajectories.
 
     python examples/check_determinism.py --port 5557
 """
 import argparse
-from skysim import check_determinism
+from garuda import check_determinism
 
 
 def main():

@@ -3,9 +3,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 CONFIG="${1:-Release}"
-echo "[SkySim] Configuring ($CONFIG)..."
+echo "[Garuda Hive] Configuring ($CONFIG)..."
 cmake -B build -DCMAKE_BUILD_TYPE="$CONFIG"
-echo "[SkySim] Building..."
+echo "[Garuda Hive] Building..."
 cmake --build build --config "$CONFIG" --parallel
-echo "[SkySim] Done -> gdextension/bin/"
+echo "[Garuda Hive] Done -> gdextension/bin/"
 ls -la gdextension/bin/

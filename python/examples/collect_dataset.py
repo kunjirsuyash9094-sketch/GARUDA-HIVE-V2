@@ -5,7 +5,7 @@
 """
 import argparse
 import numpy as np
-from skysim import SkySimEnv, NavTask, RecordRun, DomainRandomizer
+from garuda import GarudaEnv, NavTask, RecordRun, DomainRandomizer
 
 
 def policy(obs):
@@ -29,7 +29,7 @@ def main():
     ap.add_argument("--max-steps", type=int, default=1500)
     args = ap.parse_args()
 
-    base = SkySimEnv(port=args.port, task=NavTask(goal=(0, 2, -40)),
+    base = GarudaEnv(port=args.port, task=NavTask(goal=(0, 2, -40)),
                      state_mode="gps_denied", include_depth=True, max_steps=args.max_steps)
     env = RecordRun(base, out_dir=args.out)
     dr = DomainRandomizer(seed=1234)

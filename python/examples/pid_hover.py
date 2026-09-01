@@ -7,7 +7,7 @@ control. Start the server first:
 """
 import argparse
 import numpy as np
-from skysim import SkySimEnv, HoverTask
+from garuda import GarudaEnv, HoverTask
 
 
 class PID:
@@ -31,7 +31,7 @@ def main():
     ap.add_argument("--steps", type=int, default=1600)
     args = ap.parse_args()
 
-    env = SkySimEnv(port=args.port, task=HoverTask(target=(0.0, args.alt, 0.0)))
+    env = GarudaEnv(port=args.port, task=HoverTask(target=(0.0, args.alt, 0.0)))
     obs, info = env.reset(seed=0)
     dt = env.dt
 
