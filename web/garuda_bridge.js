@@ -25,7 +25,7 @@ class GarudaSimulationClient {
 
             this.ws.onopen = () => {
                 this.connected = true;
-                console.log("[GARUDA Bridge] Connected to authoritative C++20 kernel (400 Hz).");
+                console.log("[GARUDA Bridge] 🟢 Connected to authoritative C++20 kernel (400 Hz).");
                 this.updateConnectionUI(true);
             };
 
@@ -67,43 +67,66 @@ class GarudaSimulationClient {
     }
 
     arm() {
-        if (window.GarudaFlight && !window.GarudaFlight.armed) {
-            window.GarudaFlight.arm();
-        }
         this.sendAction("arm");
+        if (window.GarudaFlight) {
+            window.GarudaFlight.armed = true;
+            window.GarudaFlight.isLaunching = false;
+            window.GarudaFlight.isLanding = false;
+        }
+        if (window.GarudaAudio) window.GarudaAudio.playArmChime();
     }
 
     disarm() {
-        if (window.GarudaFlight && window.GarudaFlight.armed) {
-            window.GarudaFlight.disarm();
-        }
         this.sendAction("disarm");
+        if (window.GarudaFlight) {
+            window.GarudaFlight.armed = false;
+            window.GarudaFlight.isLaunching = false;
+            window.GarudaFlight.isLanding = false;
+        }
+        if (window.GarudaAudio) window.GarudaAudio.playDisarmSound();
     }
 
     takeoff() {
-        if (window.GarudaFlight) {
-            window.GarudaFlight.launch();
-        }
         this.sendAction("takeoff");
+        if (window.GarudaFlight) {
+            window.GarudaFlight.armed = true;
+            window.GarudaFlight.isLaunching = true;
+            window.GarudaFlight.isLanding = false;
+            window.GarudaFlight.flightMode = 'AUTO_LAUNCH';
+            window.GarudaFlight.targetAltitude = 3.0;
+        }
+        if (window.GarudaAudio) window.GarudaAudio.playLaunchSound();
     }
 
     land() {
-        if (window.GarudaFlight) {
-            window.GarudaFlight.land();
-        }
         this.sendAction("land");
+        if (window.GarudaFlight) {
+            window.GarudaFlight.isLanding = true;
+            window.GarudaFlight.isLaunching = false;
+            window.GarudaFlight.flightMode = 'AUTO_LAND';
+        }
+    }
+
+    hover() {
+        if (window.GarudaFlight) {
+            window.GarudaFlight.isLaunching = false;
+            window.GarudaFlight.isLanding = false;
+            window.GarudaFlight.flightMode = 'POS_HOLD';
+        }
+        this.setControl(0.0, 0.0, 0.0, 0.5833);
     }
 
     failMotor(index = 0) {
         if (window.GarudaFlight) {
-            window.GarudaFlight.failMotor(index);
+            window.GarudaFlight.motorHealth[index] = 2;
         }
         this.sendAction("fail_motor", { motor_index: index });
+        if (window.GarudaAudio) window.GarudaAudio.playMotorFailSound();
     }
 
     resetFailures() {
         if (window.GarudaFlight) {
-            window.GarudaFlight.restoreFailures();
+            for (let i = 0; i < 8; i++) window.GarudaFlight.motorHealth[i] = 0;
         }
         this.sendAction("reset_failures");
     }
@@ -179,7 +202,14 @@ class GarudaSimulationClient {
             this.octoModel.updateFromTelemetry(d);
         }
 
-        // 2. Update Primary Flight Display (PFD)
+        // 2. Real-time Audio Modulation (Motor Whine + Propeller Air Chop)
+        if (window.GarudaAudio && d.motor_rpm) {
+            const avgRpm = d.motor_rpm.reduce((a, b) => a + b, 0) / 8.0;
+            const thrustRatio = (d.total_thrust || 0) / 98.07;
+            window.GarudaAudio.updateMotorSound(avgRpm, thrustRatio);
+        }
+
+        // 3. Update Primary Flight Display (PFD)
         const altElem = document.getElementById('pfd-alt');
         if (altElem) altElem.textContent = `${(d.altitude || 0).toFixed(2)} m`;
 
@@ -201,7 +231,7 @@ class GarudaSimulationClient {
         const thrustElem = document.getElementById('pfd-thrust');
         if (thrustElem) thrustElem.textContent = `${(d.total_thrust || 0).toFixed(1)} N (TWR ${(d.twr || 0).toFixed(2)})`;
 
-        // 3. Update 6S Battery & Electrical HUD
+        // 4. Update 6S Battery & Electrical HUD
         if (d.battery) {
             const batPctElem = document.getElementById('bat-pct');
             if (batPctElem) batPctElem.textContent = `${(d.battery.soc * 100).toFixed(1)}%`;
@@ -233,17 +263,17 @@ class GarudaSimulationClient {
             }
         }
 
-        // 4. Update 8 Motors Telemetry Grid
+        // 5. Update 8 Motors Telemetry Grid
         const motorGrid = document.getElementById('motor-telemetry-grid');
         if (motorGrid && d.motor_rpm) {
             motorGrid.innerHTML = d.motor_rpm.map((rpm, idx) => {
-                const pct = Math.min(100, (rpm / 5000) * 100);
+                const pct = Math.min(100, (rpm / 5500) * 100);
                 const health = d.motor_health ? d.motor_health[idx] : 0;
                 const isFailed = health === 2;
                 const col = isFailed ? '#ff3366' : (rpm > 500 ? '#00f0ff' : '#8b9eb7');
-                const thrustN = d.motor_thrust ? d.motor_thrust[idx] : 0;
-                const tempC = d.motor_temp ? d.motor_temp[idx] : 26;
-                const pwrW = d.motor_power ? d.motor_power[idx] : 0;
+                const thrustN = d.motor_thrust ? d.motor_thrust[idx] : (0.00000185 * rpm * rpm);
+                const tempC = d.motor_temp ? d.motor_temp[idx] : 26 + (rpm / 5000) * 35;
+                const pwrW = d.motor_power ? d.motor_power[idx] : (rpm / 5000) * 180;
 
                 return `
                     <div class="motor-card ${isFailed ? 'failed' : ''}" style="background:rgba(15,27,48,0.75);padding:6px 8px;border-radius:6px;border:1px solid ${isFailed ? '#ff3366' : 'rgba(44,90,134,0.35)'};">
@@ -264,7 +294,7 @@ class GarudaSimulationClient {
             }).join('');
         }
 
-        // 5. Update Modular Payload & Gimbal HUD
+        // 6. Update Modular Payload & Gimbal HUD
         if (d.payload) {
             const pMassElem = document.getElementById('payload-mass');
             if (pMassElem) pMassElem.textContent = `${(d.payload.mass_kg || 0).toFixed(2)} kg`;
@@ -282,7 +312,7 @@ class GarudaSimulationClient {
             if (totalMassElem) totalMassElem.textContent = `${(8.50 + (d.payload.mass_kg || 0)).toFixed(2)} kg`;
         }
 
-        // 6. Update Extensible Sensors Grid
+        // 7. Update Extensible Sensors Grid
         const sensorGrid = document.getElementById('sensor-telemetry-grid');
         if (sensorGrid && d.sensors) {
             sensorGrid.innerHTML = d.sensors.map((s) => `
@@ -296,7 +326,7 @@ class GarudaSimulationClient {
             `).join('');
         }
 
-        // 7. Update LifeCycle, RTH Status & Health Badges
+        // 8. Update LifeCycle, RTH Status & Health Badges
         const stateBadge = document.getElementById('vehicle-state-badge');
         if (stateBadge) {
             const isArmed = d.armed || (window.GarudaFlight && window.GarudaFlight.armed);

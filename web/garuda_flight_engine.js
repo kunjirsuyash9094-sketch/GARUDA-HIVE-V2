@@ -59,6 +59,11 @@
             this.damperD = 850.0;   // N*s/m normal damping
             this.frictionCoeff = 0.70; // Dynamic Coulomb friction
 
+            // Sensitivity / Agility multipliers
+            this.throttleSensitivity = 1.0;
+            this.pitchRollAgility = 1.0;
+            this.yawAgility = 1.0;
+
             // =========================================================================
             // 2. 6-DOF Physical State Variables (Newton-Euler)
             // =========================================================================
@@ -91,12 +96,9 @@
             this.homePosition = { x: 0.0, y: this.groundClearance, z: 0.0 };
 
             // Cascaded PID Controllers
-            // Altitude Loop
             this.pidAlt = { kp: 1.8, ki: 0.25, kd: 1.4, integral: 0.0, prevErr: 0.0 };
-            // Attitude P Loop (Angle Error -> Rate Demand)
             this.attRollP = 6.5;
             this.attPitchP = 6.5;
-            // Angular Rate PID Loops (Rate Error -> Normalized Torque Demand)
             this.pidRateRoll = { kp: 0.25, ki: 0.08, kd: 0.006, integral: 0.0, prevErr: 0.0 };
             this.pidRatePitch = { kp: 0.25, ki: 0.08, kd: 0.006, integral: 0.0, prevErr: 0.0 };
             this.pidRateYaw = { kp: 0.35, ki: 0.12, kd: 0.000, integral: 0.0, prevErr: 0.0 };
@@ -174,7 +176,7 @@
                 case 'Space':
                     if (!this.armed) {
                         this.arm();
-                    } else if (this.position.y <= this.groundClearance + 0.05) {
+                    } else if (this.position.y <= this.groundClearance + 0.10) {
                         this.launch();
                     } else {
                         this.hover();
@@ -195,6 +197,16 @@
             }
         }
 
+        simulateKey(code, isPressed) {
+            this.activeKeys[code] = isPressed;
+            if (isPressed) {
+                this.handleSpecialKeyPress(code);
+            }
+            if (this.onKeyChangeCallback) {
+                this.onKeyChangeCallback(code, isPressed);
+            }
+        }
+
         setKeyChangeCallback(fn) {
             this.onKeyChangeCallback = fn;
         }
@@ -205,7 +217,7 @@
             this.isLaunching = false;
             if (window.GarudaAudio) window.GarudaAudio.playArmChime();
             if (window.GarudaClient && window.GarudaClient.connected) {
-                window.GarudaClient.arm();
+                window.GarudaClient.sendAction("arm");
             }
             console.log("[GARUDA Flight Engine] ⚡ ARMED: Motors spinning up to idle RPM.");
         }
@@ -217,20 +229,20 @@
             this.landingPhase = 'idle';
             if (window.GarudaAudio) window.GarudaAudio.playDisarmSound();
             if (window.GarudaClient && window.GarudaClient.connected) {
-                window.GarudaClient.disarm();
+                window.GarudaClient.sendAction("disarm");
             }
             console.log("[GARUDA Flight Engine] 🛑 DISARMED: Motor cut-off.");
         }
 
         launch() {
-            if (!this.armed) this.arm();
+            this.armed = true;
             this.isLaunching = true;
             this.isLanding = false;
             this.flightMode = 'AUTO_LAUNCH';
             this.targetAltitude = 3.0;
             if (window.GarudaAudio) window.GarudaAudio.playLaunchSound();
             if (window.GarudaClient && window.GarudaClient.connected) {
-                window.GarudaClient.takeoff();
+                window.GarudaClient.sendAction("takeoff");
             }
             console.log("[GARUDA Flight Engine] 🚀 TAKEOFF INITIATED: Climbing to 3.0m hover.");
         }
@@ -242,7 +254,7 @@
             this.flightMode = 'AUTO_LAND';
             this.landingPhase = 'transit_home';
             if (window.GarudaClient && window.GarudaClient.connected) {
-                window.GarudaClient.land();
+                window.GarudaClient.sendAction("land");
             }
             console.log("[GARUDA Flight Engine] 🛬 AUTO-LAND INITIATED: Returning to pad and descending.");
         }
@@ -253,10 +265,13 @@
             this.landingPhase = 'idle';
             this.flightMode = 'POS_HOLD';
             this.targetAltitude = Math.max(1.0, this.position.y - this.groundClearance);
+            if (window.GarudaClient && window.GarudaClient.connected) {
+                window.GarudaClient.setControl(0.0, 0.0, 0.0, 0.5833);
+            }
             console.log(`[GARUDA Flight Engine] 🎯 HOVER at ${this.targetAltitude.toFixed(2)}m AGL.`);
         }
 
-        resetToPad() {
+        resetLocalState() {
             this.armed = false;
             this.isLaunching = false;
             this.isLanding = false;
@@ -286,8 +301,12 @@
             if (window.GarudaClient && window.GarudaClient.octoModel) {
                 window.GarudaClient.octoModel.restoreFromCrash();
             }
+        }
+
+        resetToPad() {
+            this.resetLocalState();
             if (window.GarudaClient && window.GarudaClient.connected) {
-                window.GarudaClient.resetSimulation();
+                window.GarudaClient.sendAction("reset");
             }
             console.log("[GARUDA Flight Engine] 🔄 RESET TO HELIPAD CENTER.");
         }
@@ -298,7 +317,7 @@
                 this.targetRpms[index] = 0.0;
                 if (window.GarudaAudio) window.GarudaAudio.playMotorFailSound();
                 if (window.GarudaClient && window.GarudaClient.connected) {
-                    window.GarudaClient.failMotor(index);
+                    window.GarudaClient.sendAction("fail_motor", { motor_index: index });
                 }
                 console.warn(`[GARUDA Flight Engine] 💥 MOTOR #${index + 1} FAILURE INJECTED!`);
             }
@@ -307,7 +326,7 @@
         restoreFailures() {
             for (let i = 0; i < 8; i++) this.motorHealth[i] = 0;
             if (window.GarudaClient && window.GarudaClient.connected) {
-                window.GarudaClient.resetFailures();
+                window.GarudaClient.sendAction("reset_failures");
             }
             console.log("[GARUDA Flight Engine] 🟢 All 8 Motors Restored.");
         }
@@ -330,23 +349,30 @@
             let yawRateCmd = 0.0;// Turn CW (+) / Turn CCW (-)
             let climbCmd = 0.0;  // Throttle demand
 
-            if (keys['ArrowUp']) pitchCmd -= 0.20; // 11.5 deg pitch forward
-            if (keys['ArrowDown']) pitchCmd += 0.20; // 11.5 deg pitch back
-            if (keys['ArrowRight']) rollCmd += 0.20; // 11.5 deg roll right
-            if (keys['ArrowLeft']) rollCmd -= 0.20; // 11.5 deg roll left
+            const agility = this.pitchRollAgility || 1.0;
+            const sensitivity = this.throttleSensitivity || 1.0;
 
-            if (keys['KeyD'] || keys['KeyE']) yawRateCmd += 0.75; // rad/s
-            if (keys['KeyA'] || keys['KeyQ']) yawRateCmd -= 0.75;
+            if (keys['ArrowUp']) pitchCmd -= 0.20 * agility; // 11.5 deg pitch forward
+            if (keys['ArrowDown']) pitchCmd += 0.20 * agility; // 11.5 deg pitch back
+            if (keys['ArrowRight']) rollCmd += 0.20 * agility; // 11.5 deg roll right
+            if (keys['ArrowLeft']) rollCmd -= 0.20 * agility; // 11.5 deg roll left
 
-            if (keys['KeyW'] || keys['KeyI']) climbCmd += 1.0;
-            if (keys['KeyS'] || keys['KeyK']) climbCmd -= 1.0;
+            if (keys['KeyD'] || keys['KeyE']) yawRateCmd += 0.75 * (this.yawAgility || 1.0); // rad/s
+            if (keys['KeyA'] || keys['KeyQ']) yawRateCmd -= 0.75 * (this.yawAgility || 1.0);
+
+            if (keys['KeyW'] || keys['KeyI']) climbCmd += 1.0 * sensitivity;
+            if (keys['KeyS'] || keys['KeyK']) climbCmd -= 1.0 * sensitivity;
 
             // If connected to C++ backend, delegate authoritative control setpoints
             if (window.GarudaClient && window.GarudaClient.connected) {
-                let thrNorm = 0.5833;
-                if (this.isLaunching) thrNorm = 0.72;
-                else if (this.isLanding) thrNorm = 0.42;
-                else thrNorm = clamp(0.5833 + climbCmd * 0.25, 0.10, 0.95);
+                let thrNorm = 0.5833; // Exact steady-state hover throttle for 10.0kg
+                if (this.isLaunching) {
+                    thrNorm = 0.72; // Powerful climb thrust (140N > 98N weight)
+                } else if (this.isLanding) {
+                    thrNorm = 0.42; // Controlled descent thrust (70N < 98N weight)
+                } else {
+                    thrNorm = clamp(0.5833 + climbCmd * 0.25, 0.05, 0.95);
+                }
 
                 window.GarudaClient.setControl(rollCmd, pitchCmd, yawRateCmd, thrNorm);
                 return;
@@ -405,7 +431,6 @@
             }
 
             // 3. Attitude Outer Loop (Angle Error -> Rate Demand)
-            // Convert current quaternion to Euler RPY
             const qw = this.quaternion.w, qx = this.quaternion.x, qy = this.quaternion.y, qz = this.quaternion.z;
             const rollCur = Math.atan2(2 * (qw * qx + qy * qz), 1 - 2 * (qx * qx + qy * qy));
             const pitchCur = Math.asin(clamp(2 * (qw * qy - qz * qx), -1.0, 1.0));
@@ -483,7 +508,6 @@
             }
 
             // 7. Rigid Body Newton-Euler Integration
-            // Rotate body-frame thrust into world frame using current quaternion
             const thrustBody = { x: 0.0, y: totalThrustN, z: 0.0 };
             const qvec = { x: this.quaternion.x, y: this.quaternion.y, z: this.quaternion.z };
             const uv = {
@@ -551,7 +575,7 @@
                 if (this.velocity.y < 0.0) this.velocity.y = 0.0;
             }
 
-            // Rotational Acceleration (Euler's Rotational Equations: I*alpha + omega x (I*omega) = tau)
+            // Rotational Acceleration (Euler's Rotational Equations)
             const gyroX = (this.Iyy - this.Izz) * this.angularVel.y * this.angularVel.z;
             const gyroY = (this.Izz - this.Ixx) * this.angularVel.z * this.angularVel.x;
             const gyroZ = (this.Ixx - this.Iyy) * this.angularVel.x * this.angularVel.y;
@@ -564,7 +588,7 @@
             this.angularVel.y += this.angularAcc.y * dt;
             this.angularVel.z += this.angularAcc.z * dt;
 
-            // Quaternion Kinematics: dq/dt = 0.5 * q * (0, omega)
+            // Quaternion Kinematics
             const halfDt = 0.5 * dt;
             const dqW = (-this.quaternion.x * this.angularVel.x - this.quaternion.y * this.angularVel.y - this.quaternion.z * this.angularVel.z) * halfDt;
             const dqX = ( this.quaternion.w * this.angularVel.x + this.quaternion.y * this.angularVel.z - this.quaternion.z * this.angularVel.y) * halfDt;
@@ -576,7 +600,6 @@
             this.quaternion.y += dqY;
             this.quaternion.z += dqZ;
 
-            // Strict Quaternion Normalization
             const qNorm = Math.sqrt(this.quaternion.w * this.quaternion.w + this.quaternion.x * this.quaternion.x + this.quaternion.y * this.quaternion.y + this.quaternion.z * this.quaternion.z);
             if (qNorm > 1e-6) {
                 this.quaternion.w /= qNorm;

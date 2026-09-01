@@ -122,10 +122,18 @@
             noiseSource.start();
         }
 
+        ensureContext() {
+            if (!this.initialized) this.init();
+            if (this.ctx && this.ctx.state === 'suspended') {
+                this.ctx.resume().catch(() => {});
+            }
+        }
+
         /**
          * Real-time audio modulation based on current motor RPM, vertical speed, and thrust
          */
         updateMotorSound(avgRpm, thrustRatio = 0.5) {
+            this.ensureContext();
             if (!this.initialized || !this.ctx || this.muted) return;
 
             const t = this.ctx.currentTime;
@@ -166,6 +174,7 @@
          * ESC Initialization Chime (Di-Do-Da-Ding)
          */
         playArmChime() {
+            this.ensureContext();
             if (!this.initialized || !this.ctx || this.muted) return;
             const t = this.ctx.currentTime;
             const notes = [440, 554.37, 659.25, 880]; // A4, C#5, E5, A5
@@ -195,6 +204,7 @@
          * Disarm Sound (Descending Tone)
          */
         playDisarmSound() {
+            this.ensureContext();
             if (!this.initialized || !this.ctx || this.muted) return;
             const t = this.ctx.currentTime;
             const notes = [659.25, 554.37, 440, 220];
@@ -222,6 +232,7 @@
          * Launch Thrust Roar & Ascent Whoosh
          */
         playLaunchSound() {
+            this.ensureContext();
             if (!this.initialized || !this.ctx || this.muted) return;
             const t = this.ctx.currentTime;
 
@@ -246,6 +257,7 @@
          * Touchdown Landing Impact Thud
          */
         playTouchdownSound() {
+            this.ensureContext();
             if (!this.initialized || !this.ctx || this.muted) return;
             const t = this.ctx.currentTime;
 
@@ -269,6 +281,7 @@
          * Mechanical Futuristic UI Button Click
          */
         playUiClick() {
+            this.ensureContext();
             if (!this.initialized || !this.ctx || this.muted) return;
             const t = this.ctx.currentTime;
 
@@ -292,6 +305,7 @@
          * Catastrophic Crash Impact Sound (Heavy crunch + distorted metal thump)
          */
         playCrashSound() {
+            this.ensureContext();
             if (!this.initialized || !this.ctx || this.muted) return;
             const t = this.ctx.currentTime;
 
@@ -330,6 +344,7 @@
          * Electrical Motor Failure POP / Spark
          */
         playMotorFailSound() {
+            this.ensureContext();
             if (!this.initialized || !this.ctx || this.muted) return;
             const t = this.ctx.currentTime;
 
@@ -354,6 +369,7 @@
          * Avionics Warning Siren / Alert Beep
          */
         playWarningAlert() {
+            this.ensureContext();
             if (!this.initialized || !this.ctx || this.muted) return;
             const t = this.ctx.currentTime;
 

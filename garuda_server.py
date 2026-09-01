@@ -604,9 +604,13 @@ async def websocket_telemetry_endpoint(websocket: WebSocket):
                     sim.set_control(did, data.get("roll", 0.0), data.get("pitch", 0.0), data.get("yaw_rate", 0.0), data.get("throttle", 0.0))
                 elif action == "takeoff":
                     sim.arm(did)
-                    sim.set_control(did, 0.0, 0.0, 0.0, 0.45)
+                    sim.set_control(did, 0.0, 0.0, 0.0, 0.72)
                 elif action == "land":
-                    sim.set_control(did, 0.0, 0.0, 0.0, 0.18)
+                    sim.set_control(did, 0.0, 0.0, 0.0, 0.42)
+                elif action == "hover":
+                    sim.set_control(did, 0.0, 0.0, 0.0, 0.5833)
+                elif action == "reset":
+                    sim.reset()
                 elif action == "attach_payload":
                     sim.attach_payload(did, data.get("payload_type", 1))
                 elif action == "detach_payload":
