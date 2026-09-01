@@ -108,16 +108,20 @@ async def run_forensic_validation():
         # TEST 04: Forward Pitch Maneuver & Horizontal Acceleration
         # -----------------------------------------------------------------
         print("\n[TEST 04] Verifying Forward Pitch Control Response...", flush=True)
-        # Command nose-down pitch tilt (-0.15 rad = -8.6 deg) with hover throttle (0.5833)
-        await ws.send(json.dumps({
-            "action": "control",
-            "drone_id": "GARUDA-HL-01",
-            "roll": 0.0,
-            "pitch": -0.15,
-            "yaw_rate": 0.0,
-            "throttle": 0.5833
-        }))
-        d = await drain_and_get_frame(ws, wait_seconds=1.5)
+        # Pilot holds forward pitch stick (-0.15 rad) for 1.5s
+        t_start = time.time()
+        while time.time() - t_start < 1.5:
+            await ws.send(json.dumps({
+                "action": "control",
+                "drone_id": "GARUDA-HL-01",
+                "roll": 0.0,
+                "pitch": -0.15,
+                "yaw_rate": 0.0,
+                "throttle": 0.5833
+            }))
+            msg = await ws.recv()
+            d = json.loads(msg)["drones"][0]
+            await asyncio.sleep(0.02)
 
         pitch_deg = d["rpy_deg"]["pitch"]
         vel_z = d["velocity"]["z"]
@@ -130,16 +134,20 @@ async def run_forensic_validation():
         # TEST 05: Right Roll Maneuver & Lateral Acceleration
         # -----------------------------------------------------------------
         print("\n[TEST 05] Verifying Right Roll Control Response...", flush=True)
-        # Command right roll tilt (+0.15 rad = +8.6 deg)
-        await ws.send(json.dumps({
-            "action": "control",
-            "drone_id": "GARUDA-HL-01",
-            "roll": 0.15,
-            "pitch": 0.0,
-            "yaw_rate": 0.0,
-            "throttle": 0.5833
-        }))
-        d = await drain_and_get_frame(ws, wait_seconds=1.5)
+        # Pilot holds right roll stick (+0.15 rad) for 1.5s
+        t_start = time.time()
+        while time.time() - t_start < 1.5:
+            await ws.send(json.dumps({
+                "action": "control",
+                "drone_id": "GARUDA-HL-01",
+                "roll": 0.15,
+                "pitch": 0.0,
+                "yaw_rate": 0.0,
+                "throttle": 0.5833
+            }))
+            msg = await ws.recv()
+            d = json.loads(msg)["drones"][0]
+            await asyncio.sleep(0.02)
 
         roll_deg = d["rpy_deg"]["roll"]
         vel_x = d["velocity"]["x"]
@@ -152,15 +160,19 @@ async def run_forensic_validation():
         # TEST 06: Yaw Reaction Torque Imbalance
         # -----------------------------------------------------------------
         print("\n[TEST 06] Verifying Yaw Reaction Torque Response...", flush=True)
-        await ws.send(json.dumps({
-            "action": "control",
-            "drone_id": "GARUDA-HL-01",
-            "roll": 0.0,
-            "pitch": 0.0,
-            "yaw_rate": 0.75,
-            "throttle": 0.5833
-        }))
-        d = await drain_and_get_frame(ws, wait_seconds=1.5)
+        t_start = time.time()
+        while time.time() - t_start < 1.5:
+            await ws.send(json.dumps({
+                "action": "control",
+                "drone_id": "GARUDA-HL-01",
+                "roll": 0.0,
+                "pitch": 0.0,
+                "yaw_rate": 0.75,
+                "throttle": 0.5833
+            }))
+            msg = await ws.recv()
+            d = json.loads(msg)["drones"][0]
+            await asyncio.sleep(0.02)
 
         gyro_y = d["angular_velocity"]["y"]
         yaw_deg = d["rpy_deg"]["yaw"]
@@ -172,15 +184,12 @@ async def run_forensic_validation():
         # TEST 07: Neutral Setpoint Re-Stabilization (Braking to Hover)
         # -----------------------------------------------------------------
         print("\n[TEST 07] Verifying Neutral Setpoint Leveling & Stabilization...", flush=True)
-        await ws.send(json.dumps({
-            "action": "control",
-            "drone_id": "GARUDA-HL-01",
-            "roll": 0.0,
-            "pitch": 0.0,
-            "yaw_rate": 0.0,
-            "throttle": 0.5833
-        }))
-        d = await drain_and_get_frame(ws, wait_seconds=2.0)
+        await ws.send(json.dumps({"action": "hover", "drone_id": "GARUDA-HL-01"}))
+        t_start = time.time()
+        while time.time() - t_start < 2.0:
+            msg = await ws.recv()
+            d = json.loads(msg)["drones"][0]
+            await asyncio.sleep(0.02)
 
         neut_roll = abs(d["rpy_deg"]["roll"])
         neut_pitch = abs(d["rpy_deg"]["pitch"])

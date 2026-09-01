@@ -953,7 +953,7 @@ for (let i = 0; i < 36; i++) {
 scene.add(pineTreeGroup);
 
 // ----------------------------------------------------------------------------
-// Tactical Heated Winter Helipad with Black 'H' (LZ-01)
+// Tactical Heated Winter Helipads with Black 'H' (LZ-01 through LZ-04)
 // ----------------------------------------------------------------------------
 const padTex = GarudaTextureGenerator ? GarudaTextureGenerator.createLaunchPadTexture() : null;
 const padGeo = new THREE.CircleGeometry(1.65, 64);
@@ -965,11 +965,21 @@ const padMat = new THREE.MeshStandardMaterial({
     transparent: true,
     side: THREE.DoubleSide
 });
-const padMesh = new THREE.Mesh(padGeo, padMat);
-padMesh.rotation.x = -Math.PI / 2;
-padMesh.position.y = 0.004;
-padMesh.receiveShadow = true;
-scene.add(padMesh);
+
+const padLocations = [
+    { x: 0.0, z: 0.0, name: "LZ-01" },
+    { x: 4.0, z: 0.0, name: "LZ-02" },
+    { x: 0.0, z: 4.0, name: "LZ-03" },
+    { x: 4.0, z: 4.0, name: "LZ-04" }
+];
+
+padLocations.forEach((loc) => {
+    const padMesh = new THREE.Mesh(padGeo, padMat);
+    padMesh.rotation.x = -Math.PI / 2;
+    padMesh.position.set(loc.x, 0.004, loc.z);
+    padMesh.receiveShadow = true;
+    scene.add(padMesh);
+});
 
 // ----------------------------------------------------------------------------
 // Dynamic 3D Falling Snow Particle System

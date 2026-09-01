@@ -108,12 +108,12 @@ class GarudaSimulationClient {
     }
 
     hover() {
+        this.sendAction("hover");
         if (window.GarudaFlight) {
             window.GarudaFlight.isLaunching = false;
             window.GarudaFlight.isLanding = false;
             window.GarudaFlight.flightMode = 'POS_HOLD';
         }
-        this.setControl(0.0, 0.0, 0.0, 0.5833);
     }
 
     failMotor(index = 0) {

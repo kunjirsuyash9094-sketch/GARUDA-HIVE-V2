@@ -216,6 +216,7 @@ class SimulationRuntimeManager:
         self.is_running = True
         self.speed_multiplier = 1.0
         self.drone_ids: List[str] = []
+        self.drone_states: dict = {}
 
         # Initialize Canonical GARUDA-HL-01 Heavy-Lift Fleet
         self.add_drone("GARUDA-HL-01", 0.0, 0.28, 0.0)
@@ -227,21 +228,123 @@ class SimulationRuntimeManager:
         if drone_id not in self.drone_ids:
             garuda_lib.garuda_world_add_drone(self.handle, drone_id.encode('utf-8'), x, y, z)
             self.drone_ids.append(drone_id)
+            self.drone_states[drone_id] = {
+                "flight_mode": "DISARMED",
+                "target_pos": [x, 3.0 + y, z],
+                "home_pos": [x, y, z]
+            }
 
     def reset(self):
         garuda_lib.garuda_world_reset(self.handle)
+        for did, st in self.drone_states.items():
+            st["flight_mode"] = "DISARMED"
+            st["target_pos"] = [st["home_pos"][0], 3.0 + st["home_pos"][1], st["home_pos"][2]]
+
+    def start_auto_takeoff(self, drone_id: str, target_alt: float = 3.0):
+        self.arm(drone_id)
+        if drone_id in self.drone_states:
+            st = self.drone_states[drone_id]
+            st["flight_mode"] = "AUTO_TAKEOFF"
+            st["target_pos"] = [st["home_pos"][0], target_alt + st["home_pos"][1], st["home_pos"][2]]
+
+    def start_auto_land(self, drone_id: str):
+        if drone_id in self.drone_states:
+            st = self.drone_states[drone_id]
+            st["flight_mode"] = "AUTO_LAND"
+            st["target_pos"][0] = st["home_pos"][0]
+            st["target_pos"][2] = st["home_pos"][2]
+
+    def set_hover(self, drone_id: str):
+        telem = self.get_telemetry(drone_id)
+        if telem and drone_id in self.drone_states:
+            st = self.drone_states[drone_id]
+            st["flight_mode"] = "POS_HOLD"
+            st["target_pos"] = [telem["position"]["x"], telem["position"]["y"], telem["position"]["z"]]
+
+    def set_manual_control(self, drone_id: str, roll: float, pitch: float, yaw_rate: float, throttle: float):
+        if drone_id in self.drone_states:
+            st = self.drone_states[drone_id]
+            # Check if all inputs are neutral (hover demand)
+            is_neutral = abs(roll) < 0.005 and abs(pitch) < 0.005 and abs(yaw_rate) < 0.005 and (throttle <= 0.0 or abs(throttle - 0.5833) < 0.01)
+            if is_neutral:
+                if st["flight_mode"] == "MANUAL":
+                    self.set_hover(drone_id)
+                return
+            st["flight_mode"] = "MANUAL"
+            self.set_control(drone_id, roll, pitch, yaw_rate, throttle)
 
     def step(self):
+        # Authoritative closed-loop trajectory controller for high-level flight modes
+        for did in self.drone_ids:
+            st = self.drone_states.get(did)
+            if not st:
+                continue
+            mode = st["flight_mode"]
+            if mode in ["AUTO_TAKEOFF", "POS_HOLD", "AUTO_LAND"]:
+                telem = self.get_telemetry(did)
+                if telem and telem["status"]["armed"]:
+                    cur_x = telem["position"]["x"]
+                    cur_y = telem["position"]["y"]
+                    cur_z = telem["position"]["z"]
+                    cur_vx = telem["velocity"]["x"]
+                    cur_vy = telem["velocity"]["y"]
+                    cur_vz = telem["velocity"]["z"]
+                    cur_alt = telem["altitude"]
+
+                    target_x, target_y, target_z = st["target_pos"]
+
+                    # 1. Steady Controlled Descent for AUTO_LAND
+                    if mode == "AUTO_LAND":
+                        target_y -= 0.65 * self.dt
+                        if target_y < st["home_pos"][1]:
+                            target_y = st["home_pos"][1]
+                        st["target_pos"][1] = target_y
+
+                        # Touchdown detection on pad
+                        if cur_alt <= 0.02 and abs(cur_vy) < 0.15 and cur_y <= (st["home_pos"][1] + 0.03):
+                            self.disarm(did)
+                            st["flight_mode"] = "DISARMED"
+                            continue
+
+                    # Altitude PD
+                    alt_err = target_y - cur_y
+                    des_vy = max(-1.2, min(2.5, alt_err * 2.2))
+                    vy_err = des_vy - cur_vy
+                    thr = max(0.20, min(0.85, 0.5833 + vy_err * 0.12))
+
+                    # Horizontal Position Hold (Eliminate all drift from wind/unbalanced forces)
+                    ex = target_x - cur_x
+                    ez = target_z - cur_z
+                    des_vx = max(-1.5, min(1.5, ex * 1.8))
+                    des_vz = max(-1.5, min(1.5, ez * 1.8))
+
+                    vx_err = des_vx - cur_vx
+                    vz_err = des_vz - cur_vz
+
+                    # In FRD Body Frame: +Roll -> +X, +Pitch -> -Z (forward)
+                    roll_cmd = max(-0.15, min(0.15, vx_err * 0.08))
+                    pitch_cmd = max(-0.15, min(0.15, -vz_err * 0.08))
+
+                    self.set_control(did, roll_cmd, pitch_cmd, 0.0, thr)
+
+                    if mode == "AUTO_TAKEOFF" and abs(alt_err) < 0.10 and abs(cur_vy) < 0.2:
+                        st["flight_mode"] = "POS_HOLD"
+
         garuda_lib.garuda_world_step(self.handle)
 
     def step_n(self, count: int):
-        garuda_lib.garuda_world_step_n(self.handle, count)
+        for _ in range(count):
+            self.step()
 
     def arm(self, drone_id: str):
         garuda_lib.garuda_drone_arm(self.handle, drone_id.encode('utf-8'))
+        if drone_id in self.drone_states:
+            self.drone_states[drone_id]["flight_mode"] = "ARMED_GROUND"
 
     def disarm(self, drone_id: str):
         garuda_lib.garuda_drone_disarm(self.handle, drone_id.encode('utf-8'))
+        if drone_id in self.drone_states:
+            self.drone_states[drone_id]["flight_mode"] = "DISARMED"
 
     def set_control(self, drone_id: str, roll: float, pitch: float, yaw_rate: float, throttle: float):
         garuda_lib.garuda_drone_set_attitude(self.handle, drone_id.encode('utf-8'), roll, pitch, yaw_rate, throttle)
@@ -601,14 +704,13 @@ async def websocket_telemetry_endpoint(websocket: WebSocket):
                 elif action == "disarm":
                     sim.disarm(did)
                 elif action == "control":
-                    sim.set_control(did, data.get("roll", 0.0), data.get("pitch", 0.0), data.get("yaw_rate", 0.0), data.get("throttle", 0.0))
+                    sim.set_manual_control(did, data.get("roll", 0.0), data.get("pitch", 0.0), data.get("yaw_rate", 0.0), data.get("throttle", 0.0))
                 elif action == "takeoff":
-                    sim.arm(did)
-                    sim.set_control(did, 0.0, 0.0, 0.0, 0.72)
+                    sim.start_auto_takeoff(did, target_alt=3.0)
                 elif action == "land":
-                    sim.set_control(did, 0.0, 0.0, 0.0, 0.42)
+                    sim.start_auto_land(did)
                 elif action == "hover":
-                    sim.set_control(did, 0.0, 0.0, 0.0, 0.5833)
+                    sim.set_hover(did)
                 elif action == "reset":
                     sim.reset()
                 elif action == "attach_payload":

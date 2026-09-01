@@ -311,6 +311,52 @@
             const tex = new THREE.CanvasTexture(canvas);
             return { diffuse: tex };
         }
+
+        /**
+         * Creates Radial Gradient Motion-Blur Texture for High-RPM Propeller Spin
+         */
+        static createRotorBlurTexture() {
+            const size = 512;
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            const cx = size / 2;
+            const cy = size / 2;
+            const r = size / 2 - 8;
+
+            ctx.clearRect(0, 0, size, size);
+
+            // Radial gradient simulating physical high-speed carbon blade disc
+            const grad = ctx.createRadialGradient(cx, cy, 25, cx, cy, r);
+            grad.addColorStop(0.00, 'rgba(15, 18, 24, 0.0)');
+            grad.addColorStop(0.12, 'rgba(20, 24, 32, 0.20)');
+            grad.addColorStop(0.55, 'rgba(25, 30, 40, 0.48)');
+            grad.addColorStop(0.85, 'rgba(18, 22, 30, 0.65)');
+            grad.addColorStop(0.94, 'rgba(210, 225, 245, 0.40)'); // Tip specular flash ring
+            grad.addColorStop(0.98, 'rgba(15, 18, 24, 0.20)');
+            grad.addColorStop(1.00, 'rgba(10, 12, 16, 0.0)');
+
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Circular chord trail streaks
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+            ctx.lineWidth = 2.0;
+            ctx.beginPath();
+            ctx.arc(cx, cy, r * 0.72, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(cx, cy, r * 0.90, 0, Math.PI * 2);
+            ctx.stroke();
+
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.needsUpdate = true;
+            return tex;
+        }
     }
 
     global.GarudaTextureGenerator = GarudaTextureGenerator;

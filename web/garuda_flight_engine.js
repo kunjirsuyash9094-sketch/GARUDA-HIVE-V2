@@ -456,9 +456,20 @@
                 climbRateDemand: climbRateCmd
             };
 
-            // If connected to C++ backend, delegate authoritative control setpoints
+            // If connected to C++ backend, delegate authoritative control setpoints cleanly
             if (window.GarudaClient && window.GarudaClient.connected) {
-                window.GarudaClient.setControl(rollCmd, pitchCmd, yawRateCmd, computedThrottle);
+                if (this.isLaunching || this.isLanding) {
+                    // Backend executes authoritative 400Hz autonomous trajectory without client interference
+                    return;
+                }
+                const hasManualInput = (Math.abs(rollCmd) > 0.001 || Math.abs(pitchCmd) > 0.001 || Math.abs(yawRateCmd) > 0.001 || Math.abs(climbRateCmd) > 0.001);
+                if (hasManualInput) {
+                    this._wasManualInput = true;
+                    window.GarudaClient.setControl(rollCmd, pitchCmd, yawRateCmd, computedThrottle);
+                } else if (this._wasManualInput) {
+                    this._wasManualInput = false;
+                    window.GarudaClient.hover();
+                }
                 return;
             }
 

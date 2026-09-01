@@ -389,18 +389,20 @@ class GarudaOctocopterModel {
             }
             this.propBlades.push(bladesInRotor);
 
-            // High-RPM Dynamic Motion-Blur Supplement Disc
-            const blurGeo = new THREE.CircleGeometry(rotorRadius * 1.02, 32);
+            // High-RPM Dynamic Motion-Blur Disc with Procedural Texture
+            const blurGeo = new THREE.CircleGeometry(rotorRadius * 1.04, 36);
             blurGeo.rotateX(-Math.PI / 2);
+            const blurTex = window.GarudaTextureGenerator ? GarudaTextureGenerator.createRotorBlurTexture() : null;
             const blurMat = new THREE.MeshBasicMaterial({
-                color: 0x223344,
+                map: blurTex || null,
+                color: 0xffffff,
                 transparent: true,
                 opacity: 0.0,
                 side: THREE.DoubleSide,
                 depthWrite: false
             });
             const blurMesh = new THREE.Mesh(blurGeo, blurMat);
-            blurMesh.position.y = 0.004;
+            blurMesh.position.y = 0.005;
             rotorHead.add(blurMesh);
 
             armGroup.add(rotorHead);
@@ -553,14 +555,14 @@ class GarudaOctocopterModel {
                 this.props[i].rotation.y += deltaRot;
             }
 
-            // Motion Blur: Fades in smoothly only above 2500 RPM (Max opacity = 0.60)
+            // Photorealistic Motion Blur: Fades in smoothly above 500 RPM (Full disc above 2200 RPM)
             if (this.propBlurs[i]) {
-                const blurOnsetRpm = 2500.0;
-                const blurMaxRpm = 5500.0;
+                const blurOnsetRpm = 450.0;
+                const blurMaxRpm = 2400.0;
                 let blurOpacity = 0.0;
                 if (rpm > blurOnsetRpm) {
                     const factor = Math.min(1.0, (rpm - blurOnsetRpm) / (blurMaxRpm - blurOnsetRpm));
-                    blurOpacity = factor * 0.60;
+                    blurOpacity = factor * 0.82;
                 }
                 this.propBlurs[i].opacity = blurOpacity;
             }
