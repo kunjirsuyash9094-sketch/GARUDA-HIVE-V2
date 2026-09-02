@@ -109,8 +109,12 @@ func set_power_profile(profile_name: String) -> void:
 			max_cruise_speed = 32.0
 		"ULTRA":
 			max_rpm_limit = 10000.0
-			max_climb_speed = 20.0
-			max_cruise_speed = 45.0
+			max_climb_speed = 25.0
+			max_cruise_speed = 48.0
+			if not armed:
+				armed = true
+				target_altitude = 5.0
+			flight_mode = "⚡ ULTRA 10,000 RPM UNLOCKED"
 
 func _init_pbr_materials() -> void:
 	mat_stealth_carbon = StandardMaterial3D.new()
@@ -363,10 +367,18 @@ func _physics_process(dt: float) -> void:
 	var dynamic_hover_rpm = HOVER_RPM_BASE / sqrt(density_ratio)
 
 	var base_rpm = dynamic_hover_rpm if agl > 0.1 else IDLE_RPM
-	if velocity.y > 0.5: base_rpm = dynamic_hover_rpm + velocity.y * 240.0
-	elif velocity.y < -0.5: base_rpm = max(IDLE_RPM, dynamic_hover_rpm + velocity.y * 160.0)
+	if power_mode == "ULTRA":
+		if velocity.y > 0.2:
+			base_rpm = clamp(dynamic_hover_rpm + velocity.y * 320.0, IDLE_RPM, 9800.0)
+		elif abs(input_climb) > 0.1:
+			base_rpm = 9600.0
+		elif velocity.y < -0.5:
+			base_rpm = max(IDLE_RPM, dynamic_hover_rpm + velocity.y * 140.0)
+	else:
+		if velocity.y > 0.5: base_rpm = dynamic_hover_rpm + velocity.y * 240.0
+		elif velocity.y < -0.5: base_rpm = max(IDLE_RPM, dynamic_hover_rpm + velocity.y * 160.0)
 
-	var horiz_boost = Vector2(velocity.x, velocity.z).length() * 60.0
+	var horiz_boost = Vector2(velocity.x, velocity.z).length() * 70.0
 	base_rpm += horiz_boost
 
 	for i in range(8):

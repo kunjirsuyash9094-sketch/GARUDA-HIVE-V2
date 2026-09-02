@@ -344,3 +344,19 @@ func _update_dashboard_telemetry() -> void:
 		motor_bars[i].value = (r / 10000.0) * 100.0
 		if i < motor_labels.size():
 			motor_labels[i].text = "M%d: %d RPM" % [i + 1, int(r)]
+
+	# 4. Highlight Active Power Button
+	var btn_map = {
+		"STOPPED": find_child("BtnPwr0", true, false),
+		"ECO": find_child("BtnPwrEco", true, false),
+		"BALANCED": find_child("BtnPwrBal", true, false),
+		"MAX": find_child("BtnPwrMax", true, false),
+		"ULTRA": find_child("BtnPwrUltra", true, false)
+	}
+	for m_name in btn_map:
+		var b = btn_map[m_name]
+		if b is Button:
+			if m_name == t.power_mode:
+				b.modulate = Color(0.0, 1.0, 0.4) if m_name != "ULTRA" else Color(0.0, 0.9, 1.0)
+			else:
+				b.modulate = Color(0.7, 0.7, 0.7)

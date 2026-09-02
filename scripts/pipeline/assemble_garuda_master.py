@@ -478,38 +478,36 @@ def assemble_master_asset():
     n_cbody.children.append(n_lr_idx)
 
     # -------------------------------------------------------------------------
-    # 7. Avionics & Strobe Lighting (Solid CNC Deck + 6x Antennas + GNSS + Strobe)
+    # 7. Avionics & Strobe Lighting (Direct Airframe Body Integration - NO Boxes)
     # -------------------------------------------------------------------------
     av_parts = []
 
-    # Wide Solid CNC Aluminum Mounting Deck Plate (anchored flush on aft fuselage deck)
-    av_parts.append(create_box_mesh(0.180, 0.015, 0.120, 0.0, 0.0725, 0.170))
-    av_parts.append(create_box_mesh(0.160, 0.008, 0.100, 0.0, 0.084, 0.170))
-
-    # 6x SMA Telemetry Antenna Bushings & Masts (firmly seated on the deck)
-    deck_top_y = 0.088
+    # 6x Multi-Band Whip Antennas directly embedded into the drone's curved body
     antenna_mounts = [
-        (-0.060, 0.135, 0.100, -0.005),
-        (0.060, 0.135, 0.100, 0.005),
-        (-0.065, 0.170, 0.120, -0.008),
-        (0.065, 0.170, 0.120, 0.008),
-        (-0.055, 0.205, 0.090, -0.005),
-        (0.055, 0.205, 0.090, 0.005)
+        (-0.045, 0.076, 0.080, 0.100, -0.004),
+        ( 0.045, 0.076, 0.080, 0.100,  0.004),
+        (-0.055, 0.066, 0.135, 0.120, -0.006),
+        ( 0.055, 0.066, 0.135, 0.120,  0.006),
+        (-0.040, 0.053, 0.185, 0.090, -0.004),
+        ( 0.040, 0.053, 0.185, 0.090,  0.004)
     ]
 
-    for ax, az, ah, dx in antenna_mounts:
-        # Threaded SMA Hex Nut Collar (firmly embedded in deck)
-        av_parts.append(create_cylinder_mesh(radius=0.0075, height=0.012, segments=16, center_x=ax, center_y=deck_top_y + 0.006, center_z=az, axis='y'))
-        av_parts.append(create_cylinder_mesh(radius=0.009, height=0.004, segments=16, center_x=ax, center_y=deck_top_y + 0.002, center_z=az, axis='y'))
+    for ax, ay, az, ah, dx in antenna_mounts:
+        # Sleek circular flush-mounted SMA grommet/bezel seated right into the carbon skin
+        av_parts.append(create_cylinder_mesh(radius=0.0070, height=0.008, segments=16, center_x=ax, center_y=ay + 0.004, center_z=az, axis='y'))
+        av_parts.append(create_cylinder_mesh(radius=0.0055, height=0.006, segments=16, center_x=ax, center_y=ay + 0.009, center_z=az, axis='y'))
+        
         # High-Gain Flexible Whip Antenna Mast
-        p1 = [ax, deck_top_y + 0.012, az]
-        p2 = [ax + dx, deck_top_y + 0.012 + ah, az]
-        av_parts.append(create_oriented_cylinder(p1, p2, 0.0025, 12))
-        av_parts.append(create_sphere_mesh(radius=0.0035, rings=8, sectors=12, center_x=p2[0], center_y=p2[1], center_z=p2[2]))
+        p1 = [ax, ay + 0.012, az]
+        p2 = [ax + dx, ay + 0.012 + ah, az]
+        av_parts.append(create_oriented_cylinder(p1, p2, 0.0022, 12))
+        av_parts.append(create_sphere_mesh(radius=0.0032, rings=8, sectors=12, center_x=p2[0], center_y=p2[1], center_z=p2[2]))
 
-    # Central GNSS Dome Receiver Pod (seated in center of deck)
-    av_parts.append(create_cylinder_mesh(radius=0.024, height=0.012, segments=24, center_x=0.0, center_y=deck_top_y + 0.006, center_z=0.155, axis='y'))
-    av_parts.append(create_sphere_mesh(radius=0.022, rings=12, sectors=24, center_x=0.0, center_y=deck_top_y + 0.012, center_z=0.155))
+    # Low-Profile Circular GNSS Dome Receiver Pod (seated flush on hull centerline)
+    gnss_y = 0.070
+    gnss_z = 0.120
+    av_parts.append(create_cylinder_mesh(radius=0.022, height=0.006, segments=24, center_x=0.0, center_y=gnss_y + 0.003, center_z=gnss_z, axis='y'))
+    av_parts.append(create_sphere_mesh(radius=0.020, rings=12, sectors=24, center_x=0.0, center_y=gnss_y + 0.006, center_z=gnss_z))
 
     p_av, n_av, i_av = combine_meshes(av_parts)
     m_av_idx = builder.add_mesh(p_av, n_av, i_av, 9, "Avionics_Mesh")
@@ -518,14 +516,16 @@ def assemble_master_asset():
     builder.gltf.nodes.append(n_av)
     node_avionics.children.append(n_av_idx)
 
-    p_bb, n_bb, i_bb = combine_meshes([create_cylinder_mesh(radius=0.018, height=0.014, segments=24, center_x=0.0, center_y=0.098, center_z=0.030, axis='y')])
+    strobe_y = 0.080
+    strobe_z = 0.025
+    p_bb, n_bb, i_bb = combine_meshes([create_cylinder_mesh(radius=0.016, height=0.006, segments=24, center_x=0.0, center_y=strobe_y + 0.003, center_z=strobe_z, axis='y')])
     m_bb_idx = builder.add_mesh(p_bb, n_bb, i_bb, 9, "Beacon_Base_Mesh")
     n_bbase = Node(name="BEACON_BASE", mesh=m_bb_idx)
     n_bbase_idx = len(builder.gltf.nodes)
     builder.gltf.nodes.append(n_bbase)
     node_avionics.children.append(n_bbase_idx)
 
-    p_bd, n_bd, i_bd = combine_meshes([create_sphere_mesh(radius=0.013, rings=12, sectors=16, center_x=0.0, center_y=0.110, center_z=0.030)])
+    p_bd, n_bd, i_bd = combine_meshes([create_sphere_mesh(radius=0.012, rings=12, sectors=16, center_x=0.0, center_y=strobe_y + 0.008, center_z=strobe_z)])
     m_bd_idx = builder.add_mesh(p_bd, n_bd, i_bd, 4, "Beacon_Strobe_Mesh")
     n_bdome = Node(name="LIGHTS_BEACON", mesh=m_bd_idx)
     n_bdome_idx = len(builder.gltf.nodes)
