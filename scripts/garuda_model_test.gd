@@ -78,6 +78,8 @@ func _init_pbr_materials() -> void:
 	mat_stealth_carbon.metallic = 0.08
 	mat_stealth_carbon.roughness = 0.42
 	mat_stealth_carbon.metallic_specular = 0.50
+	mat_stealth_carbon.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat_stealth_carbon.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
 
 	# 2. MAT_CARBON_TUBE (8x Boom Arms & Landing Gear A-Frames & Skids)
 	mat_carbon_tube = StandardMaterial3D.new()
@@ -85,6 +87,8 @@ func _init_pbr_materials() -> void:
 	mat_carbon_tube.metallic = 0.05
 	mat_carbon_tube.roughness = 0.35
 	mat_carbon_tube.metallic_specular = 0.45
+	mat_carbon_tube.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat_carbon_tube.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
 
 	# 3. MAT_CNC_RED_ALUMINUM (6215 Motor Rings & Damper Bands)
 	mat_cnc_red = StandardMaterial3D.new()
@@ -92,6 +96,8 @@ func _init_pbr_materials() -> void:
 	mat_cnc_red.metallic = 0.92
 	mat_cnc_red.roughness = 0.22
 	mat_cnc_red.metallic_specular = 0.70
+	mat_cnc_red.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat_cnc_red.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
 
 	# 4. MAT_CYAN_STATUS (Recessed Lightguides & Arm Stripes #00E5FF)
 	mat_cyan_status = StandardMaterial3D.new()
@@ -99,6 +105,7 @@ func _init_pbr_materials() -> void:
 	mat_cyan_status.emission_enabled = true
 	mat_cyan_status.emission = Color(0.0, 0.90, 1.0, 1.0)
 	mat_cyan_status.emission_energy_multiplier = 3.5
+	mat_cyan_status.cull_mode = BaseMaterial3D.CULL_DISABLED
 
 	# 5. MAT_RED_STATUS (Aviation Anti-Collision Warning Beacon)
 	mat_red_status = StandardMaterial3D.new()
@@ -106,53 +113,68 @@ func _init_pbr_materials() -> void:
 	mat_red_status.emission_enabled = true
 	mat_red_status.emission = Color(1.0, 0.04, 0.04, 1.0)
 	mat_red_status.emission_energy_multiplier = 4.0
+	mat_red_status.cull_mode = BaseMaterial3D.CULL_DISABLED
 
-	# 6. Multi-Spectral Optical Lenses (Real-Life Coatings)
+	# 6. Multi-Spectral Optical Lenses (100% Solid Non-Transparent Real-Life Coatings)
 	# 4K Daylight Optical Zoom (Emerald Green Anti-Reflective Coating)
 	mat_lens_emerald = StandardMaterial3D.new()
-	mat_lens_emerald.albedo_color = Color(0.02, 0.40, 0.25, 0.95)
-	mat_lens_emerald.metallic = 0.15
-	mat_lens_emerald.roughness = 0.03
+	mat_lens_emerald.albedo_color = Color(0.02, 0.45, 0.28, 1.0)
+	mat_lens_emerald.metallic = 0.25
+	mat_lens_emerald.roughness = 0.04
 	mat_lens_emerald.metallic_specular = 0.95
+	mat_lens_emerald.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat_lens_emerald.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
 
 	# FLIR LWIR Thermal Camera (Deep Purple Germanium Coating)
 	mat_lens_germanium = StandardMaterial3D.new()
-	mat_lens_germanium.albedo_color = Color(0.35, 0.05, 0.35, 0.95)
-	mat_lens_germanium.metallic = 0.20
-	mat_lens_germanium.roughness = 0.04
+	mat_lens_germanium.albedo_color = Color(0.38, 0.06, 0.38, 1.0)
+	mat_lens_germanium.metallic = 0.30
+	mat_lens_germanium.roughness = 0.05
 	mat_lens_germanium.metallic_specular = 0.90
+	mat_lens_germanium.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat_lens_germanium.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
 
 	# SWIR / NIR Camera (Sapphire Blue Coating)
 	mat_lens_sapphire = StandardMaterial3D.new()
-	mat_lens_sapphire.albedo_color = Color(0.05, 0.20, 0.45, 0.95)
-	mat_lens_sapphire.metallic = 0.18
-	mat_lens_sapphire.roughness = 0.03
+	mat_lens_sapphire.albedo_color = Color(0.06, 0.22, 0.50, 1.0)
+	mat_lens_sapphire.metallic = 0.28
+	mat_lens_sapphire.roughness = 0.04
 	mat_lens_sapphire.metallic_specular = 0.92
+	mat_lens_sapphire.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat_lens_sapphire.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
 
 	# LRF Optical Glass Window
 	mat_optical_glass = StandardMaterial3D.new()
-	mat_optical_glass.albedo_color = Color(0.02, 0.04, 0.06, 0.95)
-	mat_optical_glass.metallic = 0.12
+	mat_optical_glass.albedo_color = Color(0.04, 0.06, 0.09, 1.0)
+	mat_optical_glass.metallic = 0.20
 	mat_optical_glass.roughness = 0.04
 	mat_optical_glass.metallic_specular = 0.90
+	mat_optical_glass.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat_optical_glass.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
 
 	# 7. MAT_SILICONE_DAMPER (Vibration Isolator Balls)
 	mat_silicone_damper = StandardMaterial3D.new()
 	mat_silicone_damper.albedo_color = Color(0.55, 0.58, 0.62, 1.0)
 	mat_silicone_damper.metallic = 0.02
 	mat_silicone_damper.roughness = 0.60
+	mat_silicone_damper.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat_silicone_damper.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
 
 	# 8. MAT_TACTICAL_WHITE (Blade Tip High-Visibility Markings ONLY)
 	mat_tactical_white = StandardMaterial3D.new()
 	mat_tactical_white.albedo_color = Color(0.90, 0.90, 0.92, 1.0)
 	mat_tactical_white.metallic = 0.0
 	mat_tactical_white.roughness = 0.25
+	mat_tactical_white.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat_tactical_white.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
 
 	# 9. MAT_PROPELLER_CARBON (16-Inch Cambered Carbon Blade Bodies)
 	mat_prop_carbon = StandardMaterial3D.new()
 	mat_prop_carbon.albedo_color = Color(0.040, 0.042, 0.045, 1.0)
 	mat_prop_carbon.metallic = 0.06
 	mat_prop_carbon.roughness = 0.38
+	mat_prop_carbon.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat_prop_carbon.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
 
 	# 10. MAT_DARK_METAL (CNC Arm Sockets, Fasteners, Rails, Antennas)
 	mat_dark_metal = StandardMaterial3D.new()
@@ -160,12 +182,16 @@ func _init_pbr_materials() -> void:
 	mat_dark_metal.metallic = 0.88
 	mat_dark_metal.roughness = 0.28
 	mat_dark_metal.metallic_specular = 0.80
+	mat_dark_metal.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat_dark_metal.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
 
 	# 11. MAT_MESH_LOUVER (Flank Diamond Mesh Ventilation Grilles)
 	mat_mesh_louver = StandardMaterial3D.new()
 	mat_mesh_louver.albedo_color = Color(0.025, 0.025, 0.028, 1.0)
 	mat_mesh_louver.metallic = 0.35
 	mat_mesh_louver.roughness = 0.70
+	mat_mesh_louver.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat_mesh_louver.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
 
 func set_color_variant(variant_name: String) -> void:
 	current_variant = variant_name

@@ -92,67 +92,113 @@ func _init_pbr_materials() -> void:
 	mat_carbon_tube.metallic = 0.05
 	mat_carbon_tube.roughness = 0.35
 
+	# 1. MAT_STEALTH_CARBON (Primary Fuselage Stealth Armor)
+	mat_stealth_carbon = StandardMaterial3D.new()
+	mat_stealth_carbon.albedo_color = Color(0.055, 0.058, 0.065, 1.0)
+	mat_stealth_carbon.metallic = 0.08
+	mat_stealth_carbon.roughness = 0.42
+	mat_stealth_carbon.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat_stealth_carbon.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
+
+	# 2. MAT_CARBON_TUBE (8x Boom Arms & Landing Gear A-Frames & Skids)
+	mat_carbon_tube = StandardMaterial3D.new()
+	mat_carbon_tube.albedo_color = Color(0.045, 0.048, 0.052, 1.0)
+	mat_carbon_tube.metallic = 0.05
+	mat_carbon_tube.roughness = 0.35
+	mat_carbon_tube.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat_carbon_tube.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
+
+	# 3. MAT_CNC_RED_ALUMINUM (6215 Motor Rings & Damper Bands)
 	mat_cnc_red = StandardMaterial3D.new()
 	mat_cnc_red.albedo_color = Color(0.78, 0.04, 0.06, 1.0)
 	mat_cnc_red.metallic = 0.92
 	mat_cnc_red.roughness = 0.22
+	mat_cnc_red.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat_cnc_red.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
 
+	# 4. MAT_CYAN_STATUS (Recessed Lightguides & Arm Stripes #00E5FF)
 	mat_cyan_status = StandardMaterial3D.new()
 	mat_cyan_status.albedo_color = Color(0.0, 0.90, 1.0, 1.0)
 	mat_cyan_status.emission_enabled = true
 	mat_cyan_status.emission = Color(0.0, 0.90, 1.0, 1.0)
 	mat_cyan_status.emission_energy_multiplier = 3.5
+	mat_cyan_status.cull_mode = BaseMaterial3D.CULL_DISABLED
 
+	# 5. MAT_RED_STATUS (Aviation Anti-Collision Warning Beacon)
 	mat_red_status = StandardMaterial3D.new()
 	mat_red_status.albedo_color = Color(1.0, 0.04, 0.04, 1.0)
 	mat_red_status.emission_enabled = true
 	mat_red_status.emission = Color(1.0, 0.04, 0.04, 1.0)
 	mat_red_status.emission_energy_multiplier = 4.0
+	mat_red_status.cull_mode = BaseMaterial3D.CULL_DISABLED
 
+	# 6. Multi-Spectral Optical Lenses (100% Solid Non-Transparent AR Coated)
 	mat_lens_emerald = StandardMaterial3D.new()
-	mat_lens_emerald.albedo_color = Color(0.02, 0.40, 0.25, 0.95)
-	mat_lens_emerald.metallic = 0.15
-	mat_lens_emerald.roughness = 0.03
+	mat_lens_emerald.albedo_color = Color(0.02, 0.45, 0.28, 1.0)
+	mat_lens_emerald.metallic = 0.25
+	mat_lens_emerald.roughness = 0.04
+	mat_lens_emerald.metallic_specular = 0.95
+	mat_lens_emerald.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat_lens_emerald.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
 
 	mat_lens_germanium = StandardMaterial3D.new()
-	mat_lens_germanium.albedo_color = Color(0.35, 0.05, 0.35, 0.95)
-	mat_lens_germanium.metallic = 0.20
-	mat_lens_germanium.roughness = 0.04
+	mat_lens_germanium.albedo_color = Color(0.38, 0.06, 0.38, 1.0)
+	mat_lens_germanium.metallic = 0.30
+	mat_lens_germanium.roughness = 0.05
+	mat_lens_germanium.metallic_specular = 0.90
+	mat_lens_germanium.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat_lens_germanium.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
 
 	mat_lens_sapphire = StandardMaterial3D.new()
-	mat_lens_sapphire.albedo_color = Color(0.05, 0.20, 0.45, 0.95)
-	mat_lens_sapphire.metallic = 0.18
-	mat_lens_sapphire.roughness = 0.03
+	mat_lens_sapphire.albedo_color = Color(0.06, 0.22, 0.50, 1.0)
+	mat_lens_sapphire.metallic = 0.28
+	mat_lens_sapphire.roughness = 0.04
+	mat_lens_sapphire.metallic_specular = 0.92
+	mat_lens_sapphire.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat_lens_sapphire.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
 
 	mat_optical_glass = StandardMaterial3D.new()
-	mat_optical_glass.albedo_color = Color(0.02, 0.04, 0.06, 0.95)
-	mat_optical_glass.metallic = 0.12
+	mat_optical_glass.albedo_color = Color(0.04, 0.06, 0.09, 1.0)
+	mat_optical_glass.metallic = 0.20
 	mat_optical_glass.roughness = 0.04
+	mat_optical_glass.metallic_specular = 0.90
+	mat_optical_glass.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat_optical_glass.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
 
 	mat_silicone_damper = StandardMaterial3D.new()
 	mat_silicone_damper.albedo_color = Color(0.55, 0.58, 0.62, 1.0)
 	mat_silicone_damper.metallic = 0.02
 	mat_silicone_damper.roughness = 0.60
+	mat_silicone_damper.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat_silicone_damper.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
 
 	mat_tactical_white = StandardMaterial3D.new()
 	mat_tactical_white.albedo_color = Color(0.90, 0.90, 0.92, 1.0)
 	mat_tactical_white.metallic = 0.0
 	mat_tactical_white.roughness = 0.25
+	mat_tactical_white.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat_tactical_white.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
 
 	mat_prop_carbon = StandardMaterial3D.new()
 	mat_prop_carbon.albedo_color = Color(0.040, 0.042, 0.045, 1.0)
 	mat_prop_carbon.metallic = 0.06
 	mat_prop_carbon.roughness = 0.38
+	mat_prop_carbon.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat_prop_carbon.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
 
 	mat_dark_metal = StandardMaterial3D.new()
 	mat_dark_metal.albedo_color = Color(0.12, 0.13, 0.14, 1.0)
 	mat_dark_metal.metallic = 0.88
 	mat_dark_metal.roughness = 0.28
+	mat_dark_metal.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat_dark_metal.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
 
 	mat_mesh_louver = StandardMaterial3D.new()
 	mat_mesh_louver.albedo_color = Color(0.025, 0.025, 0.028, 1.0)
 	mat_mesh_louver.metallic = 0.35
 	mat_mesh_louver.roughness = 0.70
+	mat_mesh_louver.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat_mesh_louver.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
 
 func _apply_materials_recursive(node: Node) -> void:
 	if node is MeshInstance3D and node.mesh:
@@ -231,44 +277,44 @@ func _physics_process(dt: float) -> void:
 	if is_landing:
 		_process_rtl(dt, agl, cur_pos)
 	else:
-		# Manual Flight with Dynamic Altitude Hold
+		# Manual Flight with Dynamic Altitude Hold (High Power Climb & Descend)
 		if abs(input_climb) > 0.05:
-			velocity.y = lerp(velocity.y, input_climb * 4.5, dt * 8.0)
+			velocity.y = lerp(velocity.y, input_climb * 8.5, dt * 10.0)
 			target_altitude = max(0.38, cur_pos.y - landing_gear_height)
 			flight_mode = "CLIMBING" if input_climb > 0 else "DESCENDING"
 		else:
 			# Auto-Hover at target altitude
 			var alt_err = target_altitude - agl
-			velocity.y = lerp(velocity.y, clamp(alt_err * 3.5, -3.0, 4.0), dt * 10.0)
+			velocity.y = lerp(velocity.y, clamp(alt_err * 4.5, -4.0, 6.0), dt * 12.0)
 			flight_mode = "AUTO-HOVER" if agl > 0.2 else "ARMED ON GROUND"
 
-		# Horizontal Flight Control
-		current_yaw_rad += input_yaw * 2.2 * dt
+		# High-Speed Horizontal Flight Control (Up to 24 m/s = 86 km/h)
+		current_yaw_rad += input_yaw * 3.5 * dt
 
-		var fwd_spd = input_forward * 9.5
-		var str_spd = input_strafe * 9.5
+		var fwd_spd = input_forward * 24.0
+		var str_spd = input_strafe * 24.0
 
 		var cos_y = cos(current_yaw_rad)
 		var sin_y = sin(current_yaw_rad)
 		var target_vx = str_spd * cos_y - fwd_spd * sin_y
 		var target_vz = str_spd * sin_y + fwd_spd * cos_y
 
-		velocity.x = lerp(velocity.x, target_vx, dt * 8.0)
-		velocity.z = lerp(velocity.z, target_vz, dt * 8.0)
+		velocity.x = lerp(velocity.x, target_vx, dt * 10.0)
+		velocity.z = lerp(velocity.z, target_vz, dt * 10.0)
 
 		if abs(input_forward) > 0.1 or abs(input_strafe) > 0.1:
-			flight_mode = "MANUAL FLIGHT"
+			flight_mode = "HIGH-SPEED CRUISE"
 
 	# 3. DYNAMIC ATTITUDE VISUAL TILT
 	var body_fwd_vel = -velocity.x * sin(current_yaw_rad) + velocity.z * cos(current_yaw_rad)
 	var body_str_vel = velocity.x * cos(current_yaw_rad) + velocity.z * sin(current_yaw_rad)
 
-	var tilt_pitch = clamp(-body_fwd_vel * 2.2, -22.0, 22.0)
-	var tilt_roll = clamp(body_str_vel * 2.2, -22.0, 22.0)
+	var tilt_pitch = clamp(-body_fwd_vel * 1.5, -28.0, 28.0)
+	var tilt_roll = clamp(body_str_vel * 1.5, -28.0, 28.0)
 
 	var target_basis = Basis.from_euler(Vector3(deg_to_rad(tilt_pitch), current_yaw_rad, deg_to_rad(tilt_roll)))
 	if is_inside_tree():
-		global_transform.basis = global_transform.basis.slerp(target_basis, clamp(dt * 14.0, 0.0, 1.0)).orthonormalized()
+		global_transform.basis = global_transform.basis.slerp(target_basis, clamp(dt * 16.0, 0.0, 1.0)).orthonormalized()
 	else:
 		transform.basis = target_basis
 
@@ -280,9 +326,9 @@ func _physics_process(dt: float) -> void:
 		if velocity.y <= 0.0:
 			cur_pos.y = landing_gear_height
 			velocity.y = 0.0
-			velocity.x *= 0.5
-			velocity.z *= 0.5
-			if is_landing and agl <= 0.03:
+			velocity.x *= 0.4
+			velocity.z *= 0.4
+			if is_landing and agl <= 0.04:
 				armed = false
 				is_landing = false
 				flight_mode = "DOCKED ON PAD"
@@ -294,16 +340,19 @@ func _physics_process(dt: float) -> void:
 
 	_set_pos(cur_pos)
 
-	# 6. MOTOR RPM SYNTHESIS
+	# 6. MOTOR RPM SYNTHESIS (High RPM Power 6800 MAX)
 	var base_rpm = HOVER_RPM if agl > 0.1 else IDLE_RPM
-	if velocity.y > 0.5: base_rpm = HOVER_RPM + 850.0
-	elif velocity.y < -0.5: base_rpm = HOVER_RPM - 650.0
+	if velocity.y > 0.5: base_rpm = HOVER_RPM + 1400.0
+	elif velocity.y < -0.5: base_rpm = HOVER_RPM - 800.0
+
+	var horiz_boost = Vector2(velocity.x, velocity.z).length() * 45.0
+	base_rpm += horiz_boost
 
 	for i in range(8):
 		var ang = rotor_angles[i]
-		var diff = -sin(ang) * tilt_roll * 10.0 + cos(ang) * tilt_pitch * 10.0 + rotor_dir[i] * input_yaw * 350.0
+		var diff = -sin(ang) * tilt_roll * 12.0 + cos(ang) * tilt_pitch * 12.0 + rotor_dir[i] * input_yaw * 450.0
 		motor_targets[i] = clamp(base_rpm + diff, IDLE_RPM, MAX_RPM)
-		motor_rpms[i] = lerp(motor_rpms[i], motor_targets[i], dt * 25.0)
+		motor_rpms[i] = lerp(motor_rpms[i], motor_targets[i], dt * 30.0)
 
 	_update_battery(dt)
 	_animate_rotors(dt)
@@ -315,26 +364,30 @@ func _set_pos(p: Vector3) -> void:
 		position = p
 
 # =============================================================================
-# 4. RTL Navigation
+# 4. Fast & Crisp RTL Navigation
 # =============================================================================
 func _process_rtl(dt: float, agl: float, cur_pos: Vector3) -> void:
 	flight_mode = "RTL AUTO-LAND"
 	var to_home = home_pos - cur_pos
 	var dist_horiz = Vector2(to_home.x, to_home.z).length()
 
-	if dist_horiz > 0.35:
+	if dist_horiz > 0.25:
 		var nav_dir = Vector2(to_home.x, to_home.z).normalized()
-		var spd = clamp(dist_horiz * 2.0, 1.5, 6.5)
-		velocity.x = lerp(velocity.x, nav_dir.x * spd, dt * 6.0)
-		velocity.z = lerp(velocity.z, nav_dir.y * spd, dt * 6.0)
+		var spd = clamp(dist_horiz * 3.5, 3.0, 16.0) # Fast transit home
+		velocity.x = lerp(velocity.x, nav_dir.x * spd, dt * 8.0)
+		velocity.z = lerp(velocity.z, nav_dir.y * spd, dt * 8.0)
 
-		var alt_target = max(3.0, target_altitude)
+		var alt_target = max(3.5, target_altitude)
 		var alt_err = alt_target - agl
-		velocity.y = lerp(velocity.y, clamp(alt_err * 3.0, -2.5, 3.5), dt * 8.0)
+		velocity.y = lerp(velocity.y, clamp(alt_err * 4.0, -3.0, 5.0), dt * 10.0)
 	else:
-		velocity.x = lerp(velocity.x, 0.0, dt * 8.0)
-		velocity.z = lerp(velocity.z, 0.0, dt * 8.0)
-		velocity.y = lerp(velocity.y, -0.65, dt * 6.0)
+		# Rapid descent with touchdown flare
+		velocity.x = lerp(velocity.x, 0.0, dt * 12.0)
+		velocity.z = lerp(velocity.z, 0.0, dt * 12.0)
+		if agl > 0.8:
+			velocity.y = lerp(velocity.y, -2.4, dt * 8.0) # Fast descent
+		else:
+			velocity.y = lerp(velocity.y, -0.75, dt * 10.0) # Touchdown flare
 
 # =============================================================================
 # 5. Battery & Rotor Animation
