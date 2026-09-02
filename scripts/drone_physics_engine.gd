@@ -1,12 +1,13 @@
 ## drone_physics_engine.gd
 ## High-Performance 6-DOF Bulletproof Multirotor Flight Engine
 ## Built for GARUDA-HL-01 Cinema Octocopter in Godot 4
+## Features 10,000 RPM Ultra Power Mode, 4000m+ Barometric Altitude Simulation & 3D Direct RTL
 
 extends Node3D
 class_name DronePhysicsEngine
 
 # =============================================================================
-# 1. Physical Specifications
+# 1. Physical Specifications & Power Profiles
 # =============================================================================
 @export var airframe_mass: float = 8.50
 @export var payload_mass: float = 2.20
@@ -14,7 +15,11 @@ class_name DronePhysicsEngine
 @export var rotor_radius: float = 0.28
 @export var landing_gear_height: float = 0.38
 
-const MAX_RPM: float = 8000.0
+var power_mode: String = "ULTRA" # "STOPPED", "ECO", "BALANCED", "MAX", "ULTRA"
+var max_rpm_limit: float = 10000.0
+var max_climb_speed: float = 20.0
+var max_cruise_speed: float = 40.0
+
 const IDLE_RPM: float = 1200.0
 const HOVER_RPM_BASE: float = 3100.0
 
@@ -57,7 +62,7 @@ const BATTERY_CAPACITY_MAH: float = 22000.0
 @onready var visual_rotor_blades: Array[Node3D] = []
 var audio_node: DroneAudioSynthesizer = null
 
-# Real-Life High-Quality PBR Materials
+# Real-Life High-Quality PBR Materials (Solid Opaque Double-Sided)
 var mat_stealth_carbon: StandardMaterial3D
 var mat_carbon_tube: StandardMaterial3D
 var mat_cnc_red: StandardMaterial3D
@@ -80,19 +85,34 @@ func _ready() -> void:
 	_find_rotor_blades()
 	current_yaw_rad = rotation.y
 	audio_node = get_tree().root.find_child("DroneAudio", true, false)
+	set_power_profile("ULTRA")
+
+func set_power_profile(profile_name: String) -> void:
+	power_mode = profile_name
+	match profile_name:
+		"STOPPED":
+			max_rpm_limit = 0.0
+			max_climb_speed = 0.0
+			max_cruise_speed = 0.0
+			if armed: trigger_disarm()
+		"ECO":
+			max_rpm_limit = 2200.0
+			max_climb_speed = 4.0
+			max_cruise_speed = 12.0
+		"BALANCED":
+			max_rpm_limit = 4500.0
+			max_climb_speed = 8.0
+			max_cruise_speed = 22.0
+		"MAX":
+			max_rpm_limit = 7500.0
+			max_climb_speed = 14.0
+			max_cruise_speed = 32.0
+		"ULTRA":
+			max_rpm_limit = 10000.0
+			max_climb_speed = 20.0
+			max_cruise_speed = 45.0
 
 func _init_pbr_materials() -> void:
-	mat_stealth_carbon = StandardMaterial3D.new()
-	mat_stealth_carbon.albedo_color = Color(0.055, 0.058, 0.065, 1.0)
-	mat_stealth_carbon.metallic = 0.08
-	mat_stealth_carbon.roughness = 0.42
-
-	mat_carbon_tube = StandardMaterial3D.new()
-	mat_carbon_tube.albedo_color = Color(0.045, 0.048, 0.052, 1.0)
-	mat_carbon_tube.metallic = 0.05
-	mat_carbon_tube.roughness = 0.35
-
-	# 1. MAT_STEALTH_CARBON (Primary Fuselage Stealth Armor)
 	mat_stealth_carbon = StandardMaterial3D.new()
 	mat_stealth_carbon.albedo_color = Color(0.055, 0.058, 0.065, 1.0)
 	mat_stealth_carbon.metallic = 0.08
@@ -100,7 +120,6 @@ func _init_pbr_materials() -> void:
 	mat_stealth_carbon.cull_mode = BaseMaterial3D.CULL_DISABLED
 	mat_stealth_carbon.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
 
-	# 2. MAT_CARBON_TUBE (8x Boom Arms & Landing Gear A-Frames & Skids)
 	mat_carbon_tube = StandardMaterial3D.new()
 	mat_carbon_tube.albedo_color = Color(0.045, 0.048, 0.052, 1.0)
 	mat_carbon_tube.metallic = 0.05
@@ -108,7 +127,6 @@ func _init_pbr_materials() -> void:
 	mat_carbon_tube.cull_mode = BaseMaterial3D.CULL_DISABLED
 	mat_carbon_tube.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
 
-	# 3. MAT_CNC_RED_ALUMINUM (6215 Motor Rings & Damper Bands)
 	mat_cnc_red = StandardMaterial3D.new()
 	mat_cnc_red.albedo_color = Color(0.78, 0.04, 0.06, 1.0)
 	mat_cnc_red.metallic = 0.92
@@ -116,7 +134,6 @@ func _init_pbr_materials() -> void:
 	mat_cnc_red.cull_mode = BaseMaterial3D.CULL_DISABLED
 	mat_cnc_red.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
 
-	# 4. MAT_CYAN_STATUS (Recessed Lightguides & Arm Stripes #00E5FF)
 	mat_cyan_status = StandardMaterial3D.new()
 	mat_cyan_status.albedo_color = Color(0.0, 0.90, 1.0, 1.0)
 	mat_cyan_status.emission_enabled = true
@@ -124,7 +141,6 @@ func _init_pbr_materials() -> void:
 	mat_cyan_status.emission_energy_multiplier = 3.5
 	mat_cyan_status.cull_mode = BaseMaterial3D.CULL_DISABLED
 
-	# 5. MAT_RED_STATUS (Aviation Anti-Collision Warning Beacon)
 	mat_red_status = StandardMaterial3D.new()
 	mat_red_status.albedo_color = Color(1.0, 0.04, 0.04, 1.0)
 	mat_red_status.emission_enabled = true
@@ -132,7 +148,7 @@ func _init_pbr_materials() -> void:
 	mat_red_status.emission_energy_multiplier = 4.0
 	mat_red_status.cull_mode = BaseMaterial3D.CULL_DISABLED
 
-	# 6. Multi-Spectral Optical Lenses (100% Solid Non-Transparent AR Coated)
+	# Multi-Spectral Optical Lenses (100% Solid Double-Sided Non-Transparent)
 	mat_lens_emerald = StandardMaterial3D.new()
 	mat_lens_emerald.albedo_color = Color(0.02, 0.45, 0.28, 1.0)
 	mat_lens_emerald.metallic = 0.25
@@ -251,20 +267,20 @@ func _find_rotor_blades() -> void:
 			visual_rotor_blades.append(blade)
 
 # =============================================================================
-# 3. 400Hz Flight Physics Loop
+# 3. 400Hz Flight Physics Loop with 10,000 RPM & 4000m+ Barometric Aerodynamics
 # =============================================================================
 func _physics_process(dt: float) -> void:
 	var cur_pos = global_position if is_inside_tree() else position
 	var agl = max(0.0, cur_pos.y - landing_gear_height)
 
-	# 1. DISARMED
-	if not armed:
-		flight_mode = "DISARMED"
+	# 1. DISARMED / STOPPED
+	if not armed or power_mode == "STOPPED":
+		flight_mode = "DISARMED (0 RPM)"
 		velocity = Vector3.ZERO
 		is_landing = false
 		for i in range(8):
 			motor_targets[i] = 0.0
-			motor_rpms[i] = lerp(motor_rpms[i], 0.0, dt * 15.0)
+			motor_rpms[i] = lerp(motor_rpms[i], 0.0, dt * 12.0)
 		cur_pos.y = landing_gear_height
 		rotation.x = 0.0
 		rotation.z = 0.0
@@ -273,27 +289,27 @@ func _physics_process(dt: float) -> void:
 		_animate_rotors(dt)
 		return
 
-	# 2. RTL AUTO-LANDING
+	# 2. RTL DIRECT 3D SMART AUTO-LANDING
 	if is_landing:
 		_process_rtl(dt, agl, cur_pos)
 	else:
-		# Manual Flight with Dynamic Altitude Hold (High Power Climb up to 4000m+)
+		# Manual Flight with Dynamic Altitude Hold (up to 4000m+ in < 4 mins)
 		if abs(input_climb) > 0.05:
-			var max_climb_rate = 14.0 if input_climb > 0 else 8.0
-			velocity.y = lerp(velocity.y, input_climb * max_climb_rate, dt * 10.0)
+			var target_v_climb = input_climb * max_climb_speed
+			velocity.y = lerp(velocity.y, target_v_climb, dt * 10.0)
 			target_altitude = max(0.38, cur_pos.y - landing_gear_height)
-			flight_mode = "CLIMBING (HIGH POWER)" if input_climb > 0 else "DESCENDING"
+			flight_mode = "CLIMBING (HYPER-THRUST)" if input_climb > 0 else "FAST DESCENT"
 		else:
-			# Auto-Hover at target altitude with high-altitude altitude-gain compensation
+			# Auto-Hover at target altitude
 			var alt_err = target_altitude - agl
-			velocity.y = lerp(velocity.y, clamp(alt_err * 4.5, -6.0, 8.0), dt * 12.0)
-			flight_mode = "AUTO-HOVER" if agl > 0.2 else "ARMED ON GROUND"
+			velocity.y = lerp(velocity.y, clamp(alt_err * 4.5, -8.0, 10.0), dt * 12.0)
+			flight_mode = "AUTO-HOVER (%s)" % power_mode if agl > 0.2 else "ARMED ON GROUND"
 
-		# High-Speed Horizontal Flight Control (Up to 28 m/s = 100+ km/h)
+		# High-Speed Horizontal Flight Control (Up to 45 m/s = 162 km/h in ULTRA)
 		current_yaw_rad += input_yaw * 3.5 * dt
 
-		var fwd_spd = input_forward * 28.0
-		var str_spd = input_strafe * 28.0
+		var fwd_spd = input_forward * max_cruise_speed
+		var str_spd = input_strafe * max_cruise_speed
 
 		var cos_y = cos(current_yaw_rad)
 		var sin_y = sin(current_yaw_rad)
@@ -304,14 +320,14 @@ func _physics_process(dt: float) -> void:
 		velocity.z = lerp(velocity.z, target_vz, dt * 10.0)
 
 		if abs(input_forward) > 0.1 or abs(input_strafe) > 0.1:
-			flight_mode = "HIGH-SPEED CRUISE (100+ KM/H)"
+			flight_mode = "HIGH-SPEED CRUISE (%d KM/H)" % int(Vector2(velocity.x, velocity.z).length() * 3.6)
 
 	# 3. DYNAMIC ATTITUDE VISUAL TILT
 	var body_fwd_vel = -velocity.x * sin(current_yaw_rad) + velocity.z * cos(current_yaw_rad)
 	var body_str_vel = velocity.x * cos(current_yaw_rad) + velocity.z * sin(current_yaw_rad)
 
-	var tilt_pitch = clamp(-body_fwd_vel * 1.5, -28.0, 28.0)
-	var tilt_roll = clamp(body_str_vel * 1.5, -28.0, 28.0)
+	var tilt_pitch = clamp(-body_fwd_vel * 1.2, -32.0, 32.0)
+	var tilt_roll = clamp(body_str_vel * 1.2, -32.0, 32.0)
 
 	var target_basis = Basis.from_euler(Vector3(deg_to_rad(tilt_pitch), current_yaw_rad, deg_to_rad(tilt_roll)))
 	if is_inside_tree():
@@ -322,13 +338,13 @@ func _physics_process(dt: float) -> void:
 	# 4. TRANSLATIONAL POSITION UPDATE
 	cur_pos += velocity * dt
 
-	# 5. GROUND CONTACT (Only clamp when falling downward)
+	# 5. GROUND CONTACT
 	if cur_pos.y <= landing_gear_height:
 		if velocity.y <= 0.0:
 			cur_pos.y = landing_gear_height
 			velocity.y = 0.0
-			velocity.x *= 0.4
-			velocity.z *= 0.4
+			velocity.x *= 0.3
+			velocity.z *= 0.3
 			if is_landing and agl <= 0.04:
 				armed = false
 				is_landing = false
@@ -341,22 +357,22 @@ func _physics_process(dt: float) -> void:
 
 	_set_pos(cur_pos)
 
-	# 6. MOTOR RPM SYNTHESIS with 8000 RPM Max & High-Altitude Barometric Compensation (4000m+)
+	# 6. MOTOR RPM SYNTHESIS with 10,000 RPM Max & High-Altitude Barometric Compensation (4000m+)
 	var altitude_msl = 3100.0 + agl # Kargil High-Altitude Base MSL
-	var density_ratio = clamp(exp(-altitude_msl / 8500.0) / 0.693, 0.45, 1.0)
-	var dynamic_hover_rpm = HOVER_RPM_BASE / sqrt(density_ratio) # Increases RPM as air thins out at 4000m+
+	var density_ratio = clamp(exp(-altitude_msl / 8500.0) / 0.693, 0.40, 1.0)
+	var dynamic_hover_rpm = HOVER_RPM_BASE / sqrt(density_ratio)
 
 	var base_rpm = dynamic_hover_rpm if agl > 0.1 else IDLE_RPM
-	if velocity.y > 0.5: base_rpm = dynamic_hover_rpm + velocity.y * 220.0
-	elif velocity.y < -0.5: base_rpm = max(IDLE_RPM, dynamic_hover_rpm + velocity.y * 180.0)
+	if velocity.y > 0.5: base_rpm = dynamic_hover_rpm + velocity.y * 240.0
+	elif velocity.y < -0.5: base_rpm = max(IDLE_RPM, dynamic_hover_rpm + velocity.y * 160.0)
 
-	var horiz_boost = Vector2(velocity.x, velocity.z).length() * 55.0
+	var horiz_boost = Vector2(velocity.x, velocity.z).length() * 60.0
 	base_rpm += horiz_boost
 
 	for i in range(8):
 		var ang = rotor_angles[i]
-		var diff = -sin(ang) * tilt_roll * 14.0 + cos(ang) * tilt_pitch * 14.0 + rotor_dir[i] * input_yaw * 500.0
-		motor_targets[i] = clamp(base_rpm + diff, IDLE_RPM, MAX_RPM)
+		var diff = -sin(ang) * tilt_roll * 16.0 + cos(ang) * tilt_pitch * 16.0 + rotor_dir[i] * input_yaw * 600.0
+		motor_targets[i] = clamp(base_rpm + diff, IDLE_RPM, max_rpm_limit)
 		motor_rpms[i] = lerp(motor_rpms[i], motor_targets[i], dt * 25.0)
 
 	_update_battery(dt)
@@ -369,30 +385,41 @@ func _set_pos(p: Vector3) -> void:
 		position = p
 
 # =============================================================================
-# 4. Fast & Crisp RTL Navigation
+# 4. Smart Direct 3D Vectorized RTL Auto-Landing
+# Simultaneous Horizontal and Vertical Descent along Direct Cone
 # =============================================================================
 func _process_rtl(dt: float, agl: float, cur_pos: Vector3) -> void:
-	flight_mode = "RTL AUTO-LAND"
+	flight_mode = "RTL 3D AUTO-LAND"
 	var to_home = home_pos - cur_pos
 	var dist_horiz = Vector2(to_home.x, to_home.z).length()
 
-	if dist_horiz > 0.25:
-		var nav_dir = Vector2(to_home.x, to_home.z).normalized()
-		var spd = clamp(dist_horiz * 3.5, 3.0, 16.0) # Fast transit home
-		velocity.x = lerp(velocity.x, nav_dir.x * spd, dt * 8.0)
-		velocity.z = lerp(velocity.z, nav_dir.y * spd, dt * 8.0)
+	# Simultaneous 3D Vector Trajectory
+	if dist_horiz > 0.30 or agl > 0.05:
+		var nav_dir_h = Vector2(to_home.x, to_home.z).normalized()
+		var target_horiz_spd = clamp(dist_horiz * 2.8, 3.5, 30.0)
+		if dist_horiz < 0.25: target_horiz_spd = dist_horiz * 4.0
 
-		var alt_target = max(3.5, target_altitude)
-		var alt_err = alt_target - agl
-		velocity.y = lerp(velocity.y, clamp(alt_err * 4.0, -3.0, 5.0), dt * 10.0)
-	else:
-		# Rapid descent with touchdown flare
-		velocity.x = lerp(velocity.x, 0.0, dt * 12.0)
-		velocity.z = lerp(velocity.z, 0.0, dt * 12.0)
-		if agl > 0.8:
-			velocity.y = lerp(velocity.y, -2.4, dt * 8.0) # Fast descent
+		velocity.x = lerp(velocity.x, nav_dir_h.x * target_horiz_spd, dt * 10.0)
+		velocity.z = lerp(velocity.z, nav_dir_h.y * target_horiz_spd, dt * 10.0)
+
+		# Fast Descent Profile (from 4000m down to pad in ~3.5 minutes)
+		var target_descent_rate: float = -0.75
+		if agl > 1000.0:
+			target_descent_rate = -22.0 # High-altitude rapid plunge
+		elif agl > 300.0:
+			target_descent_rate = -12.0 # Mid-altitude descent
+		elif agl > 40.0:
+			target_descent_rate = -5.5  # Approach
+		elif agl > 3.0:
+			target_descent_rate = -2.5  # Final approach
+		elif agl > 0.8:
+			target_descent_rate = -1.2  # Pre-flare
 		else:
-			velocity.y = lerp(velocity.y, -0.75, dt * 10.0) # Touchdown flare
+			target_descent_rate = -0.65 # Soft touchdown
+
+		velocity.y = lerp(velocity.y, target_descent_rate, dt * 8.0)
+	else:
+		velocity = Vector3.ZERO
 
 # =============================================================================
 # 5. Battery & Rotor Animation
@@ -403,7 +430,7 @@ func _update_battery(dt: float) -> void:
 	else:
 		var sum_rpm = 0.0
 		for r in motor_rpms: sum_rpm += r
-		var pwr_w = (sum_rpm / (8.0 * 5000.0)) * 1450.0
+		var pwr_w = (sum_rpm / (8.0 * 6000.0)) * 1850.0
 		battery_current = pwr_w / battery_v_term
 
 	var mah_used = (battery_current * 1000.0) * (dt / 3600.0)
@@ -419,12 +446,13 @@ func _animate_rotors(dt: float) -> void:
 			blade.rotate_y(rad_s * dt)
 
 # =============================================================================
-# 6. Interactive Command Actions
+# 6. Interactive Command Actions & Altitude Setpoints
 # =============================================================================
 func trigger_arm_takeoff() -> void:
+	if power_mode == "STOPPED": set_power_profile("ULTRA")
 	armed = true
 	is_landing = false
-	target_altitude = 2.5
+	target_altitude = 3.0
 	if audio_node and audio_node.has_method("play_arm_chime"):
 		audio_node.play_arm_chime()
 
@@ -434,6 +462,7 @@ func trigger_disarm() -> void:
 	flight_mode = "DISARMED"
 
 func trigger_auto_hover() -> void:
+	if power_mode == "STOPPED": set_power_profile("ULTRA")
 	armed = true
 	is_landing = false
 	input_forward = 0.0
@@ -441,8 +470,14 @@ func trigger_auto_hover() -> void:
 	input_climb = 0.0
 	input_yaw = 0.0
 	var cur_y = global_position.y if is_inside_tree() else position.y
-	target_altitude = max(1.5, cur_y - landing_gear_height)
+	target_altitude = max(2.5, cur_y - landing_gear_height)
 	flight_mode = "AUTO-HOVER"
+
+func set_climb_target(target_alt_meters: float) -> void:
+	if not armed: trigger_arm_takeoff()
+	is_landing = false
+	target_altitude = target_alt_meters
+	flight_mode = "CLIMBING TO %dm" % int(target_alt_meters)
 
 func trigger_rtl_landing() -> void:
 	if armed:
@@ -467,12 +502,16 @@ func get_telemetry() -> Dictionary:
 	var cur_pos = global_position if is_inside_tree() else position
 	var cur_rot = global_rotation if is_inside_tree() else rotation
 	var agl = max(0.0, cur_pos.y - landing_gear_height)
+	var alt_msl = 3100.0 + agl
 	return {
 		"armed": armed,
+		"power_mode": power_mode,
+		"max_rpm_limit": max_rpm_limit,
 		"flight_mode": flight_mode,
 		"position": cur_pos,
 		"velocity": velocity,
 		"altitude_agl": agl,
+		"altitude_msl": alt_msl,
 		"target_altitude": target_altitude,
 		"ground_speed_kmh": Vector2(velocity.x, velocity.z).length() * 3.6,
 		"vertical_speed_ms": velocity.y,

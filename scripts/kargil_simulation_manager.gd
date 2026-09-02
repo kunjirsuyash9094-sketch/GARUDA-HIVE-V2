@@ -1,5 +1,6 @@
 ## kargil_simulation_manager.gd
 ## Full Interactive Cockpit Dashboard & Flight Controller with 360° Free Mouse Orbit & Macro Zoom
+## Features Garuda OS Power Selector (0 RPM, ECO, BALANCED, MAX, 10,000 RPM ULTRA) & 4000m+ High Altitude Modes
 
 extends Node3D
 class_name KargilSimulationManager
@@ -16,7 +17,7 @@ var alt_target_val: Label = null
 var spd_value: Label = null
 var vs_value: Label = null
 var rpy_value: Label = null
-var cam_hint_label: Label = null
+var power_mode_label: Label = null
 
 # Motor Progress Bars (M1 - M8)
 var motor_bars: Array[ProgressBar] = []
@@ -37,7 +38,7 @@ var target_orbit_distance: float = 2.8
 const MOUSE_SENSITIVITY: float = 0.0055
 const ZOOM_STEP: float = 0.35
 const MIN_DISTANCE: float = 0.55  # Macro close-up to inspect textures
-const MAX_DISTANCE: float = 28.0  # Wide field view
+const MAX_DISTANCE: float = 45.0  # Wide field view for 4000m inspection
 
 func _ready() -> void:
 	_find_core_nodes()
@@ -68,6 +69,7 @@ func _init_hud_elements() -> void:
 	spd_value = find_child("SpdVal", true, false)
 	vs_value = find_child("VsVal", true, false)
 	rpy_value = find_child("RpyVal", true, false)
+	power_mode_label = find_child("LblPowerMode", true, false)
 
 	motor_bars.clear()
 	motor_labels.clear()
@@ -89,7 +91,15 @@ func _connect_interactive_buttons() -> void:
 		find_child("BtnReset", true, false),
 		find_child("BtnDisarm", true, false),
 		find_child("BtnClimb", true, false),
-		find_child("BtnDescend", true, false)
+		find_child("BtnDescend", true, false),
+		find_child("BtnPwr0", true, false),
+		find_child("BtnPwrEco", true, false),
+		find_child("BtnPwrBal", true, false),
+		find_child("BtnPwrMax", true, false),
+		find_child("BtnPwrUltra", true, false),
+		find_child("BtnClimb1000", true, false),
+		find_child("BtnClimb2500", true, false),
+		find_child("BtnClimb4000", true, false)
 	]
 	for b in buttons:
 		if b is Button:
@@ -117,14 +127,40 @@ func _connect_interactive_buttons() -> void:
 	if btn_climb: btn_climb.pressed.connect(func():
 		if drone:
 			drone.armed = true
-			drone.target_altitude = clamp(drone.target_altitude + 1.0, 0.5, 120.0)
+			drone.target_altitude = clamp(drone.target_altitude + 5.0, 0.5, 4500.0)
 	)
 
 	var btn_descend = find_child("BtnDescend", true, false)
 	if btn_descend: btn_descend.pressed.connect(func():
 		if drone:
-			drone.target_altitude = max(0.5, drone.target_altitude - 1.0)
+			drone.target_altitude = max(0.5, drone.target_altitude - 5.0)
 	)
+
+	# Power Mode Connections
+	var p0 = find_child("BtnPwr0", true, false)
+	if p0: p0.pressed.connect(func(): if drone and drone.has_method("set_power_profile"): drone.set_power_profile("STOPPED"))
+
+	var pe = find_child("BtnPwrEco", true, false)
+	if pe: pe.pressed.connect(func(): if drone and drone.has_method("set_power_profile"): drone.set_power_profile("ECO"))
+
+	var pb = find_child("BtnPwrBal", true, false)
+	if pb: pb.pressed.connect(func(): if drone and drone.has_method("set_power_profile"): drone.set_power_profile("BALANCED"))
+
+	var pm = find_child("BtnPwrMax", true, false)
+	if pm: pm.pressed.connect(func(): if drone and drone.has_method("set_power_profile"): drone.set_power_profile("MAX"))
+
+	var pu = find_child("BtnPwrUltra", true, false)
+	if pu: pu.pressed.connect(func(): if drone and drone.has_method("set_power_profile"): drone.set_power_profile("ULTRA"))
+
+	# Direct High-Altitude Ascent Setpoints
+	var c1 = find_child("BtnClimb1000", true, false)
+	if c1: c1.pressed.connect(func(): if drone and drone.has_method("set_climb_target"): drone.set_climb_target(1000.0))
+
+	var c2 = find_child("BtnClimb2500", true, false)
+	if c2: c2.pressed.connect(func(): if drone and drone.has_method("set_climb_target"): drone.set_climb_target(2500.0))
+
+	var c4 = find_child("BtnClimb4000", true, false)
+	if c4: c4.pressed.connect(func(): if drone and drone.has_method("set_climb_target"): drone.set_climb_target(4000.0))
 
 func _cycle_camera() -> void:
 	camera_mode = (camera_mode + 1) % 4
@@ -132,63 +168,60 @@ func _cycle_camera() -> void:
 	if btn_cam: btn_cam.text = "🎥 " + camera_names[camera_mode]
 
 func _unhandled_input(event: InputEvent) -> void:
-	# 1. Mouse Drag & Zoom Controls
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT or event.button_index == MOUSE_BUTTON_RIGHT or event.button_index == MOUSE_BUTTON_MIDDLE:
 			is_mouse_dragging = event.pressed
 		elif event.button_index == MOUSE_BUTTON_WHEEL_UP and event.pressed:
-			target_orbit_distance = clamp(target_orbit_distance - ZOOM_STEP, MIN_DISTANCE, MAX_DISTANCE)
+			target_orbit_distance = clamp(target_orbit_distance - ZOOM_STEP * (target_orbit_distance / 2.0), MIN_DISTANCE, MAX_DISTANCE)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN and event.pressed:
-			target_orbit_distance = clamp(target_orbit_distance + ZOOM_STEP, MIN_DISTANCE, MAX_DISTANCE)
+			target_orbit_distance = clamp(target_orbit_distance + ZOOM_STEP * (target_orbit_distance / 2.0), MIN_DISTANCE, MAX_DISTANCE)
 
 	elif event is InputEventMouseMotion and is_mouse_dragging:
 		target_orbit_yaw -= event.relative.x * MOUSE_SENSITIVITY
-		target_orbit_pitch = clamp(target_orbit_pitch + event.relative.y * MOUSE_SENSITIVITY, deg_to_rad(-78.0), deg_to_rad(85.0))
+		target_orbit_pitch = clamp(target_orbit_pitch + event.relative.y * MOUSE_SENSITIVITY, deg_to_rad(-85.0), deg_to_rad(85.0))
 
-	# 2. Keyboard Hotkeys
-	if event is InputEventKey and event.pressed and not event.echo:
-		match event.physical_keycode:
-			KEY_SPACE, KEY_ENTER:
-				if drone and drone.has_method("trigger_arm_takeoff"): drone.trigger_arm_takeoff()
-			KEY_BACKSPACE:
-				if drone and drone.has_method("trigger_disarm"): drone.trigger_disarm()
-			KEY_L:
-				if drone and drone.has_method("trigger_rtl_landing"): drone.trigger_rtl_landing()
-			KEY_H:
-				if drone and drone.has_method("trigger_auto_hover"): drone.trigger_auto_hover()
-			KEY_R:
-				if drone and drone.has_method("reset_to_pad"): drone.reset_to_pad()
-			KEY_C:
-				_cycle_camera()
+	elif event is InputEventKey and event.pressed:
+		if event.keycode == KEY_SPACE:
+			if drone and drone.has_method("trigger_arm_takeoff"): drone.trigger_arm_takeoff()
+		elif event.keycode == KEY_H:
+			if drone and drone.has_method("trigger_auto_hover"): drone.trigger_auto_hover()
+		elif event.keycode == KEY_L:
+			if drone and drone.has_method("trigger_rtl_landing"): drone.trigger_rtl_landing()
+		elif event.keycode == KEY_C:
+			_cycle_camera()
+		elif event.keycode == KEY_R:
+			if drone and drone.has_method("reset_to_pad"): drone.reset_to_pad()
+		elif event.keycode == KEY_BACKSPACE or event.keycode == KEY_ESCAPE:
+			if drone and drone.has_method("trigger_disarm"): drone.trigger_disarm()
+		elif event.keycode == KEY_1:
+			if drone and drone.has_method("set_power_profile"): drone.set_power_profile("STOPPED")
+		elif event.keycode == KEY_2:
+			if drone and drone.has_method("set_power_profile"): drone.set_power_profile("ECO")
+		elif event.keycode == KEY_3:
+			if drone and drone.has_method("set_power_profile"): drone.set_power_profile("BALANCED")
+		elif event.keycode == KEY_4:
+			if drone and drone.has_method("set_power_profile"): drone.set_power_profile("MAX")
+		elif event.keycode == KEY_5:
+			if drone and drone.has_method("set_power_profile"): drone.set_power_profile("ULTRA")
 
 func _process(delta: float) -> void:
-	if drone == null:
-		_find_core_nodes()
-		if drone == null: return
-
-	_handle_pilot_keyboard_axes(delta)
+	_handle_flight_keyboard_input()
 	_update_camera(delta)
 	_update_dashboard_telemetry()
 
-func _handle_pilot_keyboard_axes(_delta: float) -> void:
-	if drone == null: return
+func _handle_flight_keyboard_input() -> void:
+	if not drone: return
 
-	var w = Input.is_physical_key_pressed(KEY_W) or Input.is_key_pressed(KEY_W)
-	var s = Input.is_physical_key_pressed(KEY_S) or Input.is_key_pressed(KEY_S)
-	var a = Input.is_physical_key_pressed(KEY_A) or Input.is_key_pressed(KEY_A)
-	var d = Input.is_physical_key_pressed(KEY_D) or Input.is_key_pressed(KEY_D)
-	var up = Input.is_physical_key_pressed(KEY_UP) or Input.is_key_pressed(KEY_UP)
-	var down = Input.is_physical_key_pressed(KEY_DOWN) or Input.is_key_pressed(KEY_DOWN)
-	var left = Input.is_physical_key_pressed(KEY_LEFT) or Input.is_key_pressed(KEY_LEFT)
-	var right = Input.is_physical_key_pressed(KEY_RIGHT) or Input.is_key_pressed(KEY_RIGHT)
-	var space = Input.is_physical_key_pressed(KEY_SPACE) or Input.is_key_pressed(KEY_SPACE)
+	var w = Input.is_key_pressed(KEY_W)
+	var s = Input.is_key_pressed(KEY_S)
+	var up = Input.is_key_pressed(KEY_UP)
+	var down = Input.is_key_pressed(KEY_DOWN)
+	var left = Input.is_key_pressed(KEY_LEFT)
+	var right = Input.is_key_pressed(KEY_RIGHT)
+	var a = Input.is_key_pressed(KEY_A)
+	var d = Input.is_key_pressed(KEY_D)
 
-	# Auto-Arm on flight key
-	if not drone.armed and (w or up or down or left or right or space):
-		if drone.has_method("trigger_arm_takeoff"):
-			drone.trigger_arm_takeoff()
-
-	# Climb / Descend
+	# Altitude Climb / Descend
 	if w:
 		drone.input_climb = 1.0
 		drone.is_landing = false
@@ -233,13 +266,12 @@ func _update_camera(delta: float) -> void:
 	var d_pos = drone.global_position if is_inside_tree() else drone.position
 	var focus_target = d_pos + Vector3(0, 0.12, 0)
 
-	# Smooth Interpolation of Orbit Angles & Distance
 	orbit_distance = lerp(orbit_distance, target_orbit_distance, clamp(delta * 14.0, 0.0, 1.0))
 	orbit_yaw = lerp_angle(orbit_yaw, target_orbit_yaw, clamp(delta * 16.0, 0.0, 1.0))
 	orbit_pitch = lerp(orbit_pitch, target_orbit_pitch, clamp(delta * 16.0, 0.0, 1.0))
 
 	match camera_mode:
-		0: # 360 Free Orbit & Macro Inspection (Mouse Left/Right Drag + Scroll Wheel)
+		0: # 360 Free Orbit & Macro Inspection
 			var cx = orbit_distance * cos(orbit_pitch) * sin(orbit_yaw)
 			var cy = orbit_distance * sin(orbit_pitch)
 			var cz = orbit_distance * cos(orbit_pitch) * cos(orbit_yaw)
@@ -251,21 +283,21 @@ func _update_camera(delta: float) -> void:
 			else:
 				chase_camera.position = desired_pos
 
-		1: # Chase Follow Cam (Smooth rear follow with mouse pan)
+		1: # Chase Follow Cam
 			var rear_offset = drone.global_transform.basis.z * orbit_distance + Vector3(0, orbit_distance * 0.45, 0) if is_inside_tree() else Vector3(0, 1.8, 4.2)
 			var target_pos = d_pos + rear_offset
 			if is_inside_tree():
 				chase_camera.global_position = chase_camera.global_position.lerp(target_pos, delta * 12.0)
 				chase_camera.look_at(focus_target, Vector3.UP)
 
-		2: # FPV Cockpit / Nose Cam
+		2: # FPV Cockpit
 			if is_inside_tree():
 				chase_camera.global_position = d_pos + drone.global_transform.basis.z * -0.42 + Vector3(0, 0.10, 0)
 				chase_camera.global_rotation = drone.global_rotation
 
 		3: # Tactical Top-Down
 			if is_inside_tree():
-				chase_camera.global_position = d_pos + Vector3(0, 16.0, 0.05)
+				chase_camera.global_position = d_pos + Vector3(0, max(16.0, orbit_distance * 3.0), 0.05)
 				chase_camera.look_at(d_pos, Vector3.FORWARD)
 
 func _update_dashboard_telemetry() -> void:
@@ -277,23 +309,30 @@ func _update_dashboard_telemetry() -> void:
 		status_badge.text = "[ " + str(t.flight_mode) + " ]"
 		if not t.armed:
 			status_badge.modulate = Color(0.7, 0.7, 0.7)
-		elif t.flight_mode == "RTL AUTO-LAND":
+		elif t.flight_mode.contains("RTL"):
 			status_badge.modulate = Color(1.0, 0.75, 0.1)
+		elif t.flight_mode.contains("ULTRA") or t.power_mode == "ULTRA":
+			status_badge.modulate = Color(0.0, 0.9, 1.0)
 		else:
 			status_badge.modulate = Color(0.0, 1.0, 0.4)
 
 	if battery_label:
 		battery_label.text = "⚡ BATT: %.1f%% | %.2fV | %.1fA" % [t.battery_soc_pct, t.battery_volts, t.battery_amps]
-		if t.battery_soc_pct > 50.0:
-			battery_label.modulate = Color(0.0, 1.0, 0.4)
-		elif t.battery_soc_pct > 25.0:
-			battery_label.modulate = Color(1.0, 0.85, 0.2)
+
+	if power_mode_label:
+		power_mode_label.text = "POWER: %s (MAX: %d RPM)" % [t.power_mode, int(t.max_rpm_limit)]
+		if t.power_mode == "ULTRA":
+			power_mode_label.modulate = Color(0.0, 0.9, 1.0)
+		elif t.power_mode == "MAX":
+			power_mode_label.modulate = Color(1.0, 0.8, 0.2)
+		elif t.power_mode == "STOPPED":
+			power_mode_label.modulate = Color(0.8, 0.3, 0.3)
 		else:
-			battery_label.modulate = Color(1.0, 0.25, 0.2)
+			power_mode_label.modulate = Color(0.3, 1.0, 0.5)
 
 	# 2. Left Avionics Panel
-	if alt_value: alt_value.text = "ALT: %.2f m" % t.altitude_agl
-	if alt_target_val: alt_target_val.text = "TGT: %.1f m" % t.target_altitude
+	if alt_value: alt_value.text = "ALT: %.1fm (MSL: %.0fm)" % [t.altitude_agl, t.altitude_msl]
+	if alt_target_val: alt_target_val.text = "TGT: %.0fm" % t.target_altitude
 	if spd_value: spd_value.text = "SPD: %.1f km/h" % t.ground_speed_kmh
 	if vs_value: vs_value.text = "VS: %+.2f m/s" % t.vertical_speed_ms
 	if rpy_value: rpy_value.text = "R: %+.1f°  P: %+.1f°  Y: %+.0f°" % [t.roll_deg, t.pitch_deg, t.yaw_deg]
@@ -302,6 +341,6 @@ func _update_dashboard_telemetry() -> void:
 	var rpms: Array = t.motor_rpms
 	for i in range(min(motor_bars.size(), rpms.size())):
 		var r = rpms[i]
-		motor_bars[i].value = (r / 5500.0) * 100.0
+		motor_bars[i].value = (r / 10000.0) * 100.0
 		if i < motor_labels.size():
 			motor_labels[i].text = "M%d: %d RPM" % [i + 1, int(r)]

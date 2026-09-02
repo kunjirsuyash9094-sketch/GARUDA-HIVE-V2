@@ -280,6 +280,121 @@ offset_right = 305.0
 offset_bottom = 238.0
 show_percentage = false
 
+[node name="PowerBar" type="Panel" parent="HUD"]
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -340.0
+offset_top = 360.0
+offset_right = -16.0
+offset_bottom = 490.0
+
+[node name="Title" type="Label" parent="HUD/PowerBar"]
+offset_left = 14.0
+offset_top = 8.0
+offset_right = 310.0
+offset_bottom = 28.0
+text = "GARUDA OS // POWER PROFILES"
+
+[node name="LblPowerMode" type="Label" parent="HUD/PowerBar"]
+offset_left = 14.0
+offset_top = 28.0
+offset_right = 310.0
+offset_bottom = 48.0
+theme_override_colors/font_color = Color(0, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 12
+text = "POWER: ULTRA (MAX: 10000 RPM)"
+
+[node name="PwrRow1" type="HBoxContainer" parent="HUD/PowerBar"]
+offset_left = 14.0
+offset_top = 52.0
+offset_right = 310.0
+offset_bottom = 82.0
+theme_override_constants/separation = 6
+
+[node name="BtnPwr0" type="Button" parent="HUD/PowerBar/PwrRow1"]
+offset_right = 68.0
+offset_bottom = 30.0
+size_flags_horizontal = 3
+text = "0 RPM"
+
+[node name="BtnPwrEco" type="Button" parent="HUD/PowerBar/PwrRow1"]
+offset_left = 74.0
+offset_right = 144.0
+offset_bottom = 30.0
+size_flags_horizontal = 3
+text = "2.2K ECO"
+
+[node name="BtnPwrBal" type="Button" parent="HUD/PowerBar/PwrRow1"]
+offset_left = 150.0
+offset_right = 224.0
+offset_bottom = 30.0
+size_flags_horizontal = 3
+text = "4.5K BAL"
+
+[node name="BtnPwrMax" type="Button" parent="HUD/PowerBar/PwrRow1"]
+offset_left = 230.0
+offset_right = 296.0
+offset_bottom = 30.0
+size_flags_horizontal = 3
+text = "7.5K MAX"
+
+[node name="BtnPwrUltra" type="Button" parent="HUD/PowerBar"]
+offset_left = 14.0
+offset_top = 88.0
+offset_right = 310.0
+offset_bottom = 120.0
+theme_override_colors/font_color = Color(0, 0.9, 1, 1)
+text = "⚡ 10,000 RPM ULTRA (4000m+ IN 4 MINS)"
+
+[node name="AltitudeBar" type="Panel" parent="HUD"]
+offset_left = 16.0
+offset_top = 360.0
+offset_right = 340.0
+offset_bottom = 490.0
+
+[node name="Title" type="Label" parent="HUD/AltitudeBar"]
+offset_left = 14.0
+offset_top = 8.0
+offset_right = 310.0
+offset_bottom = 28.0
+text = "HIGH-ALTITUDE ASCENT MODES"
+
+[node name="Desc" type="Label" parent="HUD/AltitudeBar"]
+offset_left = 14.0
+offset_top = 28.0
+offset_right = 310.0
+offset_bottom = 48.0
+theme_override_font_sizes/font_size = 11
+text = "Barometric ISA High-Climb Target:"
+
+[node name="AltPresetRow" type="HBoxContainer" parent="HUD/AltitudeBar"]
+offset_left = 14.0
+offset_top = 54.0
+offset_right = 310.0
+offset_bottom = 90.0
+theme_override_constants/separation = 8
+
+[node name="BtnClimb1000" type="Button" parent="HUD/AltitudeBar/AltPresetRow"]
+offset_right = 93.0
+offset_bottom = 36.0
+size_flags_horizontal = 3
+text = "▲ 1000m"
+
+[node name="BtnClimb2500" type="Button" parent="HUD/AltitudeBar/AltPresetRow"]
+offset_left = 101.0
+offset_right = 194.0
+offset_bottom = 36.0
+size_flags_horizontal = 3
+text = "▲ 2500m"
+
+[node name="BtnClimb4000" type="Button" parent="HUD/AltitudeBar/AltPresetRow"]
+offset_left = 202.0
+offset_right = 296.0
+offset_bottom = 36.0
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0, 0.9, 1, 1)
+text = "⚡ 4000m"
+
 [node name="BottomControls" type="Panel" parent="HUD"]
 anchor_top = 1.0
 anchor_right = 1.0
@@ -318,7 +433,8 @@ offset_right = 594.0
 offset_bottom = 44.0
 size_flags_horizontal = 3
 focus_mode = 0
-text = "🛬 RTL AUTO-LAND (L)"
+theme_override_colors/font_color = Color(1, 0.8, 0.2, 1)
+text = "🛬 3D FAST RTL (L)"
 
 [node name="BtnCam" type="Button" parent="HUD/BottomControls/ButtonsRow"]
 offset_left = 606.0
@@ -352,4 +468,4 @@ offset_left = 16.0
 offset_top = -32.0
 offset_right = -16.0
 offset_bottom = -8.0
-text = "KEYBOARD CONTROLS: [W/S] Climb/Descend | [Arrow Keys] Pitch/Roll | [A/D] Yaw | [Space] Takeoff | [L] Land | [C] Camera | [R] Reset"
+text = "KEYBOARD CONTROLS: [W/S] Climb/Descend | [Arrow Keys] Pitch/Roll | [A/D] Yaw | [Space] Takeoff | [L] 3D Fast RTL | [1-5] Power Mode (0 to 10k RPM)"
