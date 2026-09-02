@@ -14,9 +14,9 @@ class_name DronePhysicsEngine
 @export var rotor_radius: float = 0.28
 @export var landing_gear_height: float = 0.38
 
-const MAX_RPM: float = 5500.0
+const MAX_RPM: float = 8000.0
 const IDLE_RPM: float = 1200.0
-const HOVER_RPM: float = 3350.0
+const HOVER_RPM_BASE: float = 3100.0
 
 # 8 Rotors (Octo-X alternating directions)
 var rotor_angles: Array[float] = [
@@ -46,7 +46,7 @@ var input_yaw: float = 0.0      # -1 to +1
 var motor_rpms: Array[float] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 var motor_targets: Array[float] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
-# Battery Model (22,000 mAh 6S)
+# Battery Model (22,000 mAh 6S High-C LiPo)
 var battery_soc: float = 1.0
 var battery_v_term: float = 25.20
 var battery_current: float = 0.0
@@ -277,22 +277,23 @@ func _physics_process(dt: float) -> void:
 	if is_landing:
 		_process_rtl(dt, agl, cur_pos)
 	else:
-		# Manual Flight with Dynamic Altitude Hold (High Power Climb & Descend)
+		# Manual Flight with Dynamic Altitude Hold (High Power Climb up to 4000m+)
 		if abs(input_climb) > 0.05:
-			velocity.y = lerp(velocity.y, input_climb * 8.5, dt * 10.0)
+			var max_climb_rate = 14.0 if input_climb > 0 else 8.0
+			velocity.y = lerp(velocity.y, input_climb * max_climb_rate, dt * 10.0)
 			target_altitude = max(0.38, cur_pos.y - landing_gear_height)
-			flight_mode = "CLIMBING" if input_climb > 0 else "DESCENDING"
+			flight_mode = "CLIMBING (HIGH POWER)" if input_climb > 0 else "DESCENDING"
 		else:
-			# Auto-Hover at target altitude
+			# Auto-Hover at target altitude with high-altitude altitude-gain compensation
 			var alt_err = target_altitude - agl
-			velocity.y = lerp(velocity.y, clamp(alt_err * 4.5, -4.0, 6.0), dt * 12.0)
+			velocity.y = lerp(velocity.y, clamp(alt_err * 4.5, -6.0, 8.0), dt * 12.0)
 			flight_mode = "AUTO-HOVER" if agl > 0.2 else "ARMED ON GROUND"
 
-		# High-Speed Horizontal Flight Control (Up to 24 m/s = 86 km/h)
+		# High-Speed Horizontal Flight Control (Up to 28 m/s = 100+ km/h)
 		current_yaw_rad += input_yaw * 3.5 * dt
 
-		var fwd_spd = input_forward * 24.0
-		var str_spd = input_strafe * 24.0
+		var fwd_spd = input_forward * 28.0
+		var str_spd = input_strafe * 28.0
 
 		var cos_y = cos(current_yaw_rad)
 		var sin_y = sin(current_yaw_rad)
@@ -303,7 +304,7 @@ func _physics_process(dt: float) -> void:
 		velocity.z = lerp(velocity.z, target_vz, dt * 10.0)
 
 		if abs(input_forward) > 0.1 or abs(input_strafe) > 0.1:
-			flight_mode = "HIGH-SPEED CRUISE"
+			flight_mode = "HIGH-SPEED CRUISE (100+ KM/H)"
 
 	# 3. DYNAMIC ATTITUDE VISUAL TILT
 	var body_fwd_vel = -velocity.x * sin(current_yaw_rad) + velocity.z * cos(current_yaw_rad)
@@ -340,19 +341,23 @@ func _physics_process(dt: float) -> void:
 
 	_set_pos(cur_pos)
 
-	# 6. MOTOR RPM SYNTHESIS (High RPM Power 6800 MAX)
-	var base_rpm = HOVER_RPM if agl > 0.1 else IDLE_RPM
-	if velocity.y > 0.5: base_rpm = HOVER_RPM + 1400.0
-	elif velocity.y < -0.5: base_rpm = HOVER_RPM - 800.0
+	# 6. MOTOR RPM SYNTHESIS with 8000 RPM Max & High-Altitude Barometric Compensation (4000m+)
+	var altitude_msl = 3100.0 + agl # Kargil High-Altitude Base MSL
+	var density_ratio = clamp(exp(-altitude_msl / 8500.0) / 0.693, 0.45, 1.0)
+	var dynamic_hover_rpm = HOVER_RPM_BASE / sqrt(density_ratio) # Increases RPM as air thins out at 4000m+
 
-	var horiz_boost = Vector2(velocity.x, velocity.z).length() * 45.0
+	var base_rpm = dynamic_hover_rpm if agl > 0.1 else IDLE_RPM
+	if velocity.y > 0.5: base_rpm = dynamic_hover_rpm + velocity.y * 220.0
+	elif velocity.y < -0.5: base_rpm = max(IDLE_RPM, dynamic_hover_rpm + velocity.y * 180.0)
+
+	var horiz_boost = Vector2(velocity.x, velocity.z).length() * 55.0
 	base_rpm += horiz_boost
 
 	for i in range(8):
 		var ang = rotor_angles[i]
-		var diff = -sin(ang) * tilt_roll * 12.0 + cos(ang) * tilt_pitch * 12.0 + rotor_dir[i] * input_yaw * 450.0
+		var diff = -sin(ang) * tilt_roll * 14.0 + cos(ang) * tilt_pitch * 14.0 + rotor_dir[i] * input_yaw * 500.0
 		motor_targets[i] = clamp(base_rpm + diff, IDLE_RPM, MAX_RPM)
-		motor_rpms[i] = lerp(motor_rpms[i], motor_targets[i], dt * 30.0)
+		motor_rpms[i] = lerp(motor_rpms[i], motor_targets[i], dt * 25.0)
 
 	_update_battery(dt)
 	_animate_rotors(dt)
