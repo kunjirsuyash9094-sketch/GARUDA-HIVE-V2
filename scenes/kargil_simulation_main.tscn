@@ -4,7 +4,7 @@
 [ext_resource type="Script" path="res://scripts/kargil_world_builder.gd" id="2_world"]
 [ext_resource type="Script" path="res://scripts/drone_physics_engine.gd" id="3_drone"]
 [ext_resource type="Script" path="res://scripts/drone_audio_synthesizer.gd" id="4_audio"]
-[ext_resource type="PackedScene" path="res://models/garuda_hl01.glb" id="5_model"]
+[ext_resource type="PackedScene" path="res://models/GARUDA_HL_01/00_MASTER/GARUDA_HL_01_MASTER.glb" id="5_model"]
 
 [node name="KargilSimulationMain" type="Node3D"]
 script = ExtResource("1_mgr")
