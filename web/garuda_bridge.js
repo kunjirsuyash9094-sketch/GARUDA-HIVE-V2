@@ -27,6 +27,7 @@ class GarudaSimulationClient {
                 this.connected = true;
                 console.log("[GARUDA Bridge] 🟢 Connected to authoritative C++20 kernel (400 Hz).");
                 this.updateConnectionUI(true);
+                this.resetFailures();
             };
 
             this.ws.onmessage = (event) => {
@@ -128,6 +129,9 @@ class GarudaSimulationClient {
         if (window.GarudaFlight) {
             for (let i = 0; i < 8; i++) window.GarudaFlight.motorHealth[i] = 0;
         }
+        if (this.octoModel) {
+            this.octoModel.restoreFromCrash();
+        }
         this.sendAction("reset_failures");
     }
 
@@ -182,6 +186,10 @@ class GarudaSimulationClient {
         if (window.GarudaFlight) {
             window.GarudaFlight.resetToPad();
         }
+        if (this.octoModel) {
+            this.octoModel.restoreFromCrash();
+        }
+        this.sendAction("reset");
         if (this.connected) await fetch('/api/simulation/reset', { method: 'POST' }).catch(() => {});
     }
 

@@ -1,0 +1,405 @@
+[gd_scene load_steps=7 format=3 uid="uid://c7w9d3vx3k8b"]
+
+[ext_resource type="Script" path="res://scripts/garuda_model_test.gd" id="1_test"]
+[ext_resource type="PackedScene" path="res://models/GARUDA_HL_01/00_MASTER/GARUDA_HL_01_MASTER.glb" id="2_model"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_1"]
+sky_top_color = Color(0.08, 0.10, 0.13, 1)
+sky_horizon_color = Color(0.12, 0.14, 0.18, 1)
+ground_bottom_color = Color(0.05, 0.06, 0.07, 1)
+ground_horizon_color = Color(0.09, 0.10, 0.12, 1)
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("ProceduralSkyMaterial_1")
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 2
+sky = SubResource("Sky_1")
+tonemap_mode = 3
+tonemap_exposure = 1.05
+glow_enabled = true
+glow_intensity = 0.8
+glow_bloom = 0.35
+ssao_enabled = true
+ssao_radius = 0.8
+ssao_intensity = 2.2
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_Ground"]
+albedo_color = Color(0.07, 0.08, 0.10, 1)
+roughness = 0.88
+
+[node name="GARUDA_MODEL_TEST" type="Node3D"]
+script = ExtResource("1_test")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="KeyLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.707107, -0.5, 0.5, 0, 0.707107, 0.707107, -0.707107, -0.5, 0.5, 0, 8, 0)
+light_color = Color(0.96, 0.98, 1, 1)
+light_energy = 1.3
+shadow_enabled = true
+shadow_bias = 0.015
+shadow_blur = 1.5
+
+[node name="FillLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.707107, 0.5, -0.5, 0, 0.707107, 0.707107, 0.707107, 0.5, -0.5, 0, 8, 0)
+light_color = Color(0.35, 0.45, 0.60, 1)
+light_energy = 0.45
+
+[node name="GimbalFillLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, 0.25, -0.433013, 0, 0.866025, 0.5, 0.5, -0.433013, 0.75, 0, 1, -4)
+light_color = Color(0.80, 0.88, 1.0, 1)
+light_energy = 0.65
+
+[node name="NeutralGround" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.38, 0)
+size = Vector3(30, 0.02, 30)
+material = SubResource("StandardMaterial3D_Ground")
+
+[node name="GARUDA_HL_01" parent="." instance=ExtResource("2_model")]
+
+[node name="CameraPivot" type="Node3D" parent="."]
+transform = Transform3D(1.0, 0.0, 0.0, 0.0, 0.00872654, 0.999962, 0.0, -0.999962, 0.00872654, 0, 0, 0)
+
+[node name="Camera3D" type="Camera3D" parent="CameraPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1.75)
+current = true
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="PanelMeasurements" type="Panel" parent="UI"]
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 380.0
+offset_bottom = 165.0
+
+[node name="Title" type="Label" parent="UI/PanelMeasurements"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 8.0
+offset_right = 345.0
+offset_bottom = 30.0
+text = "GARUDA-HL-01 MECHANICAL SCALE DATA"
+horizontal_alignment = 1
+
+[node name="LblVariant" type="Label" parent="UI/PanelMeasurements"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 32.0
+offset_right = 345.0
+offset_bottom = 52.0
+text = "COLORWAY: STEALTH BLACK"
+theme_override_colors/font_color = Color(0, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 12
+
+[node name="LblSpan" type="Label" parent="UI/PanelMeasurements"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 54.0
+offset_right = 345.0
+offset_bottom = 74.0
+text = "MOTOR SPAN: 1.10 m (Authoritative 8-Rotor Octo-X)"
+theme_override_font_sizes/font_size = 12
+
+[node name="LblArm" type="Label" parent="UI/PanelMeasurements"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 76.0
+offset_right = 345.0
+offset_bottom = 96.0
+text = "ARM LENGTH: 0.55 m (Chassis to Motor Shaft)"
+theme_override_font_sizes/font_size = 12
+
+[node name="LblDims" type="Label" parent="UI/PanelMeasurements"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 98.0
+offset_right = 345.0
+offset_bottom = 118.0
+text = "GROUND CLEARANCE: 360mm | STAND: 560mm"
+theme_override_font_sizes/font_size = 12
+
+[node name="LblRotors" type="Label" parent="UI/PanelMeasurements"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 120.0
+offset_right = 345.0
+offset_bottom = 140.0
+text = "TURRET: 156mm x 203mm x 163mm Quad-Sensor"
+theme_override_font_sizes/font_size = 12
+
+[node name="PanelControls" type="Panel" parent="UI"]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -340.0
+offset_top = 20.0
+offset_right = -20.0
+offset_bottom = 580.0
+grow_horizontal = 0
+
+[node name="Title" type="Label" parent="UI/PanelControls"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 8.0
+offset_right = 305.0
+offset_bottom = 30.0
+text = "GARUDA-HL-01 STEALTH BLACK"
+horizontal_alignment = 1
+
+[node name="LblRPM" type="Label" parent="UI/PanelControls"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 34.0
+offset_right = 150.0
+offset_bottom = 56.0
+text = "Rotor RPM Test:"
+
+[node name="LblRPMVal" type="Label" parent="UI/PanelControls"]
+layout_mode = 0
+offset_left = 180.0
+offset_top = 34.0
+offset_right = 305.0
+offset_bottom = 56.0
+text = "0 RPM"
+horizontal_alignment = 2
+
+[node name="SliderMasterRPM" type="HSlider" parent="UI/PanelControls"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 58.0
+offset_right = 305.0
+offset_bottom = 78.0
+max_value = 4000.0
+step = 50.0
+
+[node name="BtnRpm0" type="Button" parent="UI/PanelControls"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 82.0
+offset_right = 70.0
+offset_bottom = 105.0
+theme_override_font_sizes/font_size = 11
+text = "0 RPM"
+
+[node name="BtnRpm1500" type="Button" parent="UI/PanelControls"]
+layout_mode = 0
+offset_left = 75.0
+offset_top = 82.0
+offset_right = 145.0
+offset_bottom = 105.0
+theme_override_font_sizes/font_size = 11
+text = "1500 (Idle)"
+
+[node name="BtnRpm2400" type="Button" parent="UI/PanelControls"]
+layout_mode = 0
+offset_left = 150.0
+offset_top = 82.0
+offset_right = 225.0
+offset_bottom = 105.0
+theme_override_font_sizes/font_size = 11
+text = "2400 (Hover)"
+
+[node name="BtnRpm3800" type="Button" parent="UI/PanelControls"]
+layout_mode = 0
+offset_left = 230.0
+offset_top = 82.0
+offset_right = 305.0
+offset_bottom = 105.0
+theme_override_font_sizes/font_size = 11
+text = "3800 (Max)"
+
+[node name="LblGimbal" type="Label" parent="UI/PanelControls"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 112.0
+offset_right = 305.0
+offset_bottom = 134.0
+text = "3-Axis Stabilized Gimbal:"
+
+[node name="LblYaw" type="Label" parent="UI/PanelControls"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 136.0
+offset_right = 65.0
+offset_bottom = 156.0
+text = "Yaw:"
+
+[node name="SliderGimbalYaw" type="HSlider" parent="UI/PanelControls"]
+layout_mode = 0
+offset_left = 65.0
+offset_top = 136.0
+offset_right = 305.0
+offset_bottom = 156.0
+min_value = -180.0
+max_value = 180.0
+
+[node name="LblPitch" type="Label" parent="UI/PanelControls"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 162.0
+offset_right = 65.0
+offset_bottom = 182.0
+text = "Pitch:"
+
+[node name="SliderGimbalPitch" type="HSlider" parent="UI/PanelControls"]
+layout_mode = 0
+offset_left = 65.0
+offset_top = 162.0
+offset_right = 305.0
+offset_bottom = 182.0
+min_value = -90.0
+max_value = 30.0
+
+[node name="LblRoll" type="Label" parent="UI/PanelControls"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 188.0
+offset_right = 65.0
+offset_bottom = 208.0
+text = "Roll:"
+
+[node name="SliderGimbalRoll" type="HSlider" parent="UI/PanelControls"]
+layout_mode = 0
+offset_left = 65.0
+offset_top = 188.0
+offset_right = 305.0
+offset_bottom = 208.0
+min_value = -45.0
+max_value = 45.0
+
+[node name="LblOrtho" type="Label" parent="UI/PanelControls"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 216.0
+offset_right = 305.0
+offset_bottom = 238.0
+text = "Inspection Views:"
+
+[node name="BtnTop" type="Button" parent="UI/PanelControls"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 240.0
+offset_right = 305.0
+offset_bottom = 268.0
+text = "⭐ 05 TOP VIEW (DIRECT ORTHO)"
+
+[node name="BtnGimbalCloseup" type="Button" parent="UI/PanelControls"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 274.0
+offset_right = 150.0
+offset_bottom = 300.0
+theme_override_colors/font_color = Color(0, 0.9, 1, 1)
+text = "📷 GIMBAL ('C')"
+
+[node name="BtnStandCloseup" type="Button" parent="UI/PanelControls"]
+layout_mode = 0
+offset_left = 170.0
+offset_top = 274.0
+offset_right = 305.0
+offset_bottom = 300.0
+text = "🛸 STAND / GEAR"
+
+[node name="BtnFront45" type="Button" parent="UI/PanelControls"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 306.0
+offset_right = 150.0
+offset_bottom = 332.0
+text = "07 45° FRONT"
+
+[node name="BtnHeroFront" type="Button" parent="UI/PanelControls"]
+layout_mode = 0
+offset_left = 170.0
+offset_top = 306.0
+offset_right = 305.0
+offset_bottom = 332.0
+text = "HERO 3/4"
+
+[node name="BtnFront" type="Button" parent="UI/PanelControls"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 338.0
+offset_right = 150.0
+offset_bottom = 364.0
+text = "01 FRONT"
+
+[node name="BtnBack" type="Button" parent="UI/PanelControls"]
+layout_mode = 0
+offset_left = 170.0
+offset_top = 338.0
+offset_right = 305.0
+offset_bottom = 364.0
+text = "02 REAR"
+
+[node name="BtnLeft" type="Button" parent="UI/PanelControls"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 370.0
+offset_right = 150.0
+offset_bottom = 396.0
+text = "03 LEFT"
+
+[node name="BtnRight" type="Button" parent="UI/PanelControls"]
+layout_mode = 0
+offset_left = 170.0
+offset_top = 370.0
+offset_right = 305.0
+offset_bottom = 396.0
+text = "04 RIGHT"
+
+[node name="BtnBottom" type="Button" parent="UI/PanelControls"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 402.0
+offset_right = 305.0
+offset_bottom = 428.0
+text = "06 BOTTOM VIEW"
+
+[node name="LblVar" type="Label" parent="UI/PanelControls"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 436.0
+offset_right = 305.0
+offset_bottom = 458.0
+text = "Colorway Selection:"
+
+[node name="BtnVarStealth" type="Button" parent="UI/PanelControls"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 460.0
+offset_right = 305.0
+offset_bottom = 488.0
+theme_override_colors/font_color = Color(0, 0.9, 1, 1)
+text = "⭐ STEALTH BLACK (DEFAULT REFERENCE)"
+
+[node name="BtnResetOrbit" type="Button" parent="UI/PanelControls"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 498.0
+offset_right = 305.0
+offset_bottom = 528.0
+text = "🔄 RESET TOP FOCUS ('F')"
+
+[connection signal="value_changed" from="UI/PanelControls/SliderMasterRPM" to="." method="_on_slider_master_rpm_value_changed"]
+[connection signal="pressed" from="UI/PanelControls/BtnRpm0" to="." method="set_preset_rpm" binds= [0.0]]
+[connection signal="pressed" from="UI/PanelControls/BtnRpm1500" to="." method="set_preset_rpm" binds= [1500.0]]
+[connection signal="pressed" from="UI/PanelControls/BtnRpm2400" to="." method="set_preset_rpm" binds= [2400.0]]
+[connection signal="pressed" from="UI/PanelControls/BtnRpm3800" to="." method="set_preset_rpm" binds= [3800.0]]
+[connection signal="value_changed" from="UI/PanelControls/SliderGimbalYaw" to="." method="_on_slider_gimbal_yaw_value_changed"]
+[connection signal="value_changed" from="UI/PanelControls/SliderGimbalPitch" to="." method="_on_slider_gimbal_pitch_value_changed"]
+[connection signal="value_changed" from="UI/PanelControls/SliderGimbalRoll" to="." method="_on_slider_gimbal_roll_value_changed"]
+[connection signal="pressed" from="UI/PanelControls/BtnTop" to="." method="_on_btn_ortho_view_pressed" binds= ["TOP"]]
+[connection signal="pressed" from="UI/PanelControls/BtnGimbalCloseup" to="." method="_on_btn_gimbal_closeup_pressed"]
+[connection signal="pressed" from="UI/PanelControls/BtnStandCloseup" to="." method="_on_btn_stand_closeup_pressed"]
+[connection signal="pressed" from="UI/PanelControls/BtnFront45" to="." method="_on_btn_ortho_view_pressed" binds= ["FRONT_45"]]
+[connection signal="pressed" from="UI/PanelControls/BtnHeroFront" to="." method="_on_btn_hero_front_pressed"]
+[connection signal="pressed" from="UI/PanelControls/BtnFront" to="." method="_on_btn_ortho_view_pressed" binds= ["FRONT"]]
+[connection signal="pressed" from="UI/PanelControls/BtnBack" to="." method="_on_btn_ortho_view_pressed" binds= ["BACK"]]
+[connection signal="pressed" from="UI/PanelControls/BtnLeft" to="." method="_on_btn_ortho_view_pressed" binds= ["LEFT"]]
+[connection signal="pressed" from="UI/PanelControls/BtnRight" to="." method="_on_btn_ortho_view_pressed" binds= ["RIGHT"]]
+[connection signal="pressed" from="UI/PanelControls/BtnBottom" to="." method="_on_btn_ortho_view_pressed" binds= ["BOTTOM"]]
+[connection signal="pressed" from="UI/PanelControls/BtnVarStealth" to="." method="set_color_variant" binds= ["STEALTH_BLACK"]]
+[connection signal="pressed" from="UI/PanelControls/BtnResetOrbit" to="." method="_on_btn_ortho_view_pressed" binds= ["TOP"]]

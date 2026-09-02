@@ -1,0 +1,109 @@
+[gd_scene load_steps=6 format=3 uid="uid://c9d9yvq0x3x3"]
+
+[ext_resource type="Script" path="res://scripts/gimbal_test_controller.gd" id="1_ctrl"]
+[ext_resource type="PackedScene" path="res://models/GARUDA_HL_01/06_PAYLOAD/GIMBAL_MASTER.glb" id="2_gimbal"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_1"]
+sky_top_color = Color(0.28, 0.35, 0.45, 1)
+sky_horizon_color = Color(0.55, 0.62, 0.7, 1)
+ground_bottom_color = Color(0.12, 0.14, 0.16, 1)
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("ProceduralSkyMaterial_1")
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 2
+sky = SubResource("Sky_1")
+tonemap_mode = 3
+glow_enabled = true
+
+[node name="GIMBAL_TEST" type="Node3D"]
+script = ExtResource("1_ctrl")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.707107, -0.5, 0.5, 0, 0.707107, 0.707107, -0.707107, -0.5, 0.5, 0, 3, 0)
+light_energy = 1.2
+shadow_enabled = true
+
+[node name="GIMBAL_MASTER" parent="." instance=ExtResource("2_gimbal")]
+
+[node name="CameraPivot" type="Node3D" parent="."]
+
+[node name="Camera3D" type="Camera3D" parent="CameraPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.65)
+current = true
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="Panel" type="Panel" parent="UI"]
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 320.0
+offset_bottom = 240.0
+
+[node name="Title" type="Label" parent="UI/Panel"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 10.0
+offset_right = 285.0
+offset_bottom = 35.0
+text = "GIMBAL_MASTER TEST"
+horizontal_alignment = 1
+
+[node name="LblYaw" type="Label" parent="UI/Panel"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 50.0
+offset_right = 80.0
+offset_bottom = 75.0
+text = "Yaw:"
+
+[node name="SliderYaw" type="HSlider" parent="UI/Panel"]
+layout_mode = 0
+offset_left = 80.0
+offset_top = 50.0
+offset_right = 285.0
+offset_bottom = 70.0
+min_value = -180.0
+max_value = 180.0
+
+[node name="LblPitch" type="Label" parent="UI/Panel"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 90.0
+offset_right = 80.0
+offset_bottom = 115.0
+text = "Pitch:"
+
+[node name="SliderPitch" type="HSlider" parent="UI/Panel"]
+layout_mode = 0
+offset_left = 80.0
+offset_top = 90.0
+offset_right = 285.0
+offset_bottom = 110.0
+min_value = -90.0
+max_value = 30.0
+
+[node name="LblRoll" type="Label" parent="UI/Panel"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 130.0
+offset_right = 80.0
+offset_bottom = 155.0
+text = "Roll:"
+
+[node name="SliderRoll" type="HSlider" parent="UI/Panel"]
+layout_mode = 0
+offset_left = 80.0
+offset_top = 130.0
+offset_right = 285.0
+offset_bottom = 150.0
+min_value = -45.0
+max_value = 45.0
+
+[connection signal="value_changed" from="UI/Panel/SliderYaw" to="." method="_on_slider_yaw_value_changed"]
+[connection signal="value_changed" from="UI/Panel/SliderPitch" to="." method="_on_slider_pitch_value_changed"]
+[connection signal="value_changed" from="UI/Panel/SliderRoll" to="." method="_on_slider_roll_value_changed"]

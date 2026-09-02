@@ -1,0 +1,125 @@
+[gd_scene load_steps=6 format=3 uid="uid://b8d8yvq0x2x2"]
+
+[ext_resource type="Script" path="res://scripts/rotor_test_controller.gd" id="1_ctrl"]
+[ext_resource type="PackedScene" path="res://models/GARUDA_HL_01/04_PROPELLERS/ROTOR_MASTER.glb" id="2_rotor"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_1"]
+sky_top_color = Color(0.28, 0.35, 0.45, 1)
+sky_horizon_color = Color(0.55, 0.62, 0.7, 1)
+ground_bottom_color = Color(0.12, 0.14, 0.16, 1)
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("ProceduralSkyMaterial_1")
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 2
+sky = SubResource("Sky_1")
+tonemap_mode = 3
+glow_enabled = true
+
+[node name="ROTOR_TEST" type="Node3D"]
+script = ExtResource("1_ctrl")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.707107, -0.5, 0.5, 0, 0.707107, 0.707107, -0.707107, -0.5, 0.5, 0, 3, 0)
+light_energy = 1.2
+shadow_enabled = true
+
+[node name="ROTOR_MASTER" parent="." instance=ExtResource("2_rotor")]
+
+[node name="CameraPivot" type="Node3D" parent="."]
+
+[node name="Camera3D" type="Camera3D" parent="CameraPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.85)
+current = true
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="Panel" type="Panel" parent="UI"]
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 320.0
+offset_bottom = 320.0
+
+[node name="Title" type="Label" parent="UI/Panel"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 10.0
+offset_right = 285.0
+offset_bottom = 35.0
+text = "ROTOR_MASTER TEST"
+horizontal_alignment = 1
+
+[node name="LblRPM" type="Label" parent="UI/Panel"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 45.0
+offset_right = 285.0
+offset_bottom = 70.0
+text = "RPM: 0"
+
+[node name="LblDir" type="Label" parent="UI/Panel"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 75.0
+offset_right = 285.0
+offset_bottom = 100.0
+text = "DIRECTION: CCW"
+
+[node name="Btn0" type="Button" parent="UI/Panel"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 110.0
+offset_right = 95.0
+offset_bottom = 140.0
+text = "0 RPM"
+
+[node name="Btn500" type="Button" parent="UI/Panel"]
+layout_mode = 0
+offset_left = 110.0
+offset_top = 110.0
+offset_right = 190.0
+offset_bottom = 140.0
+text = "500 RPM"
+
+[node name="Btn1000" type="Button" parent="UI/Panel"]
+layout_mode = 0
+offset_left = 205.0
+offset_top = 110.0
+offset_right = 285.0
+offset_bottom = 140.0
+text = "1000 RPM"
+
+[node name="Btn2000" type="Button" parent="UI/Panel"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 155.0
+offset_right = 95.0
+offset_bottom = 185.0
+text = "2000 RPM"
+
+[node name="Btn3000" type="Button" parent="UI/Panel"]
+layout_mode = 0
+offset_left = 110.0
+offset_top = 155.0
+offset_right = 190.0
+offset_bottom = 185.0
+text = "3000 RPM"
+
+[node name="BtnToggleDir" type="Button" parent="UI/Panel"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 210.0
+offset_right = 285.0
+offset_bottom = 250.0
+text = "🔄 TOGGLE CW / CCW"
+
+[connection signal="pressed" from="UI/Panel/Btn0" to="." method="set_rpm" binds= [0.0]]
+[connection signal="pressed" from="UI/Panel/Btn500" to="." method="set_rpm" binds= [500.0]]
+[connection signal="pressed" from="UI/Panel/Btn1000" to="." method="set_rpm" binds= [1000.0]]
+[connection signal="pressed" from="UI/Panel/Btn2000" to="." method="set_rpm" binds= [2000.0]]
+[connection signal="pressed" from="UI/Panel/Btn3000" to="." method="set_rpm" binds= [3000.0]]
+[connection signal="pressed" from="UI/Panel/BtnToggleDir" to="." method="toggle_direction"]

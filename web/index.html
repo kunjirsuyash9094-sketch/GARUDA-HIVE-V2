@@ -8,13 +8,17 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
-<!-- Three.js & OrbitControls -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<!-- Three.js & OrbitControls (Local Offline First + CDN Fallback) -->
+<script src="three.min.js"></script>
+<script>if (typeof THREE === 'undefined') document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>');</script>
+<script src="OrbitControls.js"></script>
+<script>if (typeof THREE !== 'undefined' && typeof THREE.OrbitControls === 'undefined') document.write('<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"><\/script>');</script>
 <!-- Procedural PBR Textures -->
 <script src="garuda_textures.js"></script>
 <!-- Procedural Web Audio Synthesizer -->
 <script src="garuda_audio.js"></script>
+<!-- Photorealistic Kargil Himalayan Digital Twin & Underground Drone Hive -->
+<script src="garuda_kargil_world.js"></script>
 <!-- 3D Heavy-Lift Cinema Drone Model -->
 <script src="garuda_octocopter.js"></script>
 <!-- 400Hz Flight Controller & Keyboard Engine -->
@@ -424,8 +428,21 @@
     </div>
   </div>
 
-  <!-- Camera Modes & Audio Selector -->
+  <!-- Environment, Hive Gates & Camera Modes -->
   <div style="display:flex;align-items:center;gap:8px;">
+    <!-- Hive Gates Toggle -->
+    <button class="btn" style="padding:4px 10px;font-size:10px;border-color:var(--accent-yellow);color:var(--accent-yellow);" onclick="window.GarudaWorld && window.GarudaWorld.toggleHiveGate()">🚪 HIVE DOORS</button>
+
+    <div style="width:1px;height:20px;background:rgba(255,255,255,0.1);margin:0 2px;"></div>
+
+    <!-- Time of Day -->
+    <span style="font-size:10px;color:var(--fg-muted);font-weight:700;">ENV:</span>
+    <button class="btn" style="padding:4px 8px;font-size:10px;" onclick="window.GarudaWorld && window.GarudaWorld.setTimeOfDay('DAY')">☀️ DAY</button>
+    <button class="btn" style="padding:4px 8px;font-size:10px;" onclick="window.GarudaWorld && window.GarudaWorld.setTimeOfDay('DAWN')">🌅 DAWN</button>
+    <button class="btn" style="padding:4px 8px;font-size:10px;" onclick="window.GarudaWorld && window.GarudaWorld.setTimeOfDay('NIGHT')">🌙 NIGHT</button>
+
+    <div style="width:1px;height:20px;background:rgba(255,255,255,0.1);margin:0 2px;"></div>
+
     <span style="font-size:10px;color:var(--fg-muted);font-weight:700;">CAM:</span>
     <button class="btn" style="padding:4px 8px;font-size:10px;" id="cam-orbit-btn" onclick="setCameraMode('orbit')">🎥 ORBIT</button>
     <button class="btn" style="padding:4px 8px;font-size:10px;" id="cam-chase-btn" onclick="setCameraMode('chase')">🚁 FOLLOW</button>
@@ -447,6 +464,9 @@
 
 <!-- Left Small Corner Floating Toolbar -->
 <nav id="left-toolbar">
+  <button class="nav-pill-btn" id="btn-toggle-physics" style="border-color:var(--accent-cyan);" onclick="toggleLeftCard('card-physics', this)">
+    <span>🔬</span> Physics Diagnostics
+  </button>
   <button class="nav-pill-btn" id="btn-toggle-telemetry" onclick="toggleLeftCard('card-telemetry', this)">
     <span>📊</span> Flight Telemetry
   </button>
@@ -479,6 +499,24 @@
 <!-- Left Stack of Popout Cards (Non-intrusive) -->
 <div id="left-cards-container">
 
+  <!-- 0. Live Physics & Dynamics Diagnostic Card -->
+  <div id="card-physics" class="panel info-popout-card" style="padding:12px;display:block;">
+    <div class="card-header">
+      <span class="card-title" style="color:var(--accent-cyan);">🔬 Physics State Diagnostics</span>
+      <button class="btn" style="padding:2px 6px;font-size:9px;" onclick="toggleLeftCard('card-physics')">✕</button>
+    </div>
+
+    <!-- Live Multirotor Dynamics Values -->
+    <div class="telemetry-row"><span class="telemetry-label">Vehicle Mass (Dry+Payload)</span><span class="telemetry-val" style="color:var(--accent-yellow);">10.70 kg</span></div>
+    <div class="telemetry-row"><span class="telemetry-label">Gravity Weight (m·g)</span><span class="telemetry-val" style="color:var(--accent-yellow);">104.93 N</span></div>
+    <div class="telemetry-row"><span class="telemetry-label">Total Rotor Thrust</span><span id="dbg-thrust" class="telemetry-val" style="color:var(--accent-cyan);font-weight:700;">0.00 N</span></div>
+    <div class="telemetry-row"><span class="telemetry-label">Pilot Throttle Setpoint</span><span id="dbg-throttle" class="telemetry-val" style="color:var(--accent-green);font-weight:700;">0.0%</span></div>
+    <div class="telemetry-row"><span class="telemetry-label">Vertical Acceleration (a_y)</span><span id="dbg-ay" class="telemetry-val">0.00 m/s²</span></div>
+    <div class="telemetry-row"><span class="telemetry-label">Vertical Velocity (v_y)</span><span id="dbg-vy" class="telemetry-val">0.00 m/s</span></div>
+    <div class="telemetry-row"><span class="telemetry-label">Attitude (R / P / Y)</span><span id="dbg-rpy" class="telemetry-val">0.0° / 0.0° / 0.0°</span></div>
+    <div class="telemetry-row"><span class="telemetry-label">Ground State</span><span id="dbg-ground-contact" class="telemetry-val" style="color:var(--accent-green);">ON PAD (RESTING)</span></div>
+  </div>
+
   <!-- 1. Flight Telemetry Card -->
   <div id="card-telemetry" class="panel info-popout-card" style="padding:12px;">
     <div class="card-header">
@@ -508,6 +546,10 @@
     <div class="telemetry-row">
       <span class="telemetry-label">Propulsion Thrust</span>
       <span id="pfd-thrust" class="telemetry-val" style="color:var(--accent-yellow);">0.0 N (TWR 0.00)</span>
+    </div>
+    <div class="telemetry-row">
+      <span class="telemetry-label">Helipad Distance</span>
+      <span id="pfd-pad-dist" class="telemetry-val" style="color:var(--accent-cyan);">0.00 m</span>
     </div>
   </div>
 
@@ -560,7 +602,11 @@
   <div id="card-payload" class="panel info-popout-card" style="padding:12px;">
     <div class="card-header">
       <span class="card-title">Modular Payloads & Gimbal</span>
-      <button class="btn" style="padding:2px 6px;font-size:9px;" onclick="toggleLeftCard('card-payload')">✕</button>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <span id="payload-power-badge" class="badge" style="color:var(--accent-yellow);font-size:9px;padding:2px 6px;">18 W</span>
+        <span id="payload-state-label" class="badge" style="color:var(--accent-green);font-size:9px;padding:2px 6px;">ATTACHED</span>
+        <button class="btn" style="padding:2px 6px;font-size:9px;" onclick="toggleLeftCard('card-payload')">✕</button>
+      </div>
     </div>
     <div style="margin-bottom:8px;">
       <label style="font-size:10px;color:var(--fg-muted);display:block;margin-bottom:3px;">ACTIVE PAYLOAD BAY (Keys 1-7)</label>
@@ -790,12 +836,8 @@
 const container = document.getElementById('viewport');
 const scene = new THREE.Scene();
 
-// Sunny Azure Blue Outdoor Sky Dome
-scene.background = new THREE.Color(0x87ceeb);
-scene.fog = new THREE.FogExp2(0xcbe7ff, 0.005);
-
-const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(2.4, 1.4, 2.4);
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1500);
+camera.position.set(3.6, 2.2, 4.0);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -816,170 +858,11 @@ if (typeof THREE.OrbitControls !== 'undefined') {
     controls.maxPolarAngle = Math.PI / 2 - 0.02;
 }
 
-// Natural Outdoor Sun & Sky Hemispheric Lighting
 // ----------------------------------------------------------------------------
-// Realistic Alpine Winter Sky & Cold Mountain Atmosphere
+// Instantiate Kargil-Inspired High-Altitude Environment & Underground Hive
 // ----------------------------------------------------------------------------
-scene.background = new THREE.Color(0xb2c7de);
-scene.fog = new THREE.FogExp2(0xb2c7de, 0.0055);
-
-const hemiLight = new THREE.HemisphereLight(0xddebf8, 0x8298b0, 1.2);
-scene.add(hemiLight);
-
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.55);
-scene.add(ambientLight);
-
-// Crisp High-Altitude Alpine Sunlight
-const sunLight = new THREE.DirectionalLight(0xffffff, 2.1);
-sunLight.position.set(24, 38, 18);
-sunLight.castShadow = true;
-sunLight.shadow.mapSize.width = 2048;
-sunLight.shadow.mapSize.height = 2048;
-sunLight.shadow.camera.near = 0.5;
-sunLight.shadow.camera.far = 80;
-sunLight.shadow.camera.left = -8;
-sunLight.shadow.camera.right = 8;
-sunLight.shadow.camera.top = 8;
-sunLight.shadow.camera.bottom = -8;
-sunLight.shadow.bias = -0.0001;
-scene.add(sunLight);
-
-// ----------------------------------------------------------------------------
-// Crisp Alpine Snow Valley Terrain
-// ----------------------------------------------------------------------------
-const snowTex = GarudaTextureGenerator ? GarudaTextureGenerator.createSnowTerrainTexture() : null;
-const snowGeo = new THREE.PlaneGeometry(450, 450);
-const snowMat = new THREE.MeshStandardMaterial({
-    map: snowTex || null,
-    color: 0xf4f8fc,
-    roughness: 0.75,
-    metalness: 0.05
-});
-const snowMesh = new THREE.Mesh(snowGeo, snowMat);
-snowMesh.rotation.x = -Math.PI / 2;
-snowMesh.position.y = 0.0;
-snowMesh.receiveShadow = true;
-scene.add(snowMesh);
-
-// ----------------------------------------------------------------------------
-// Majestic 3D Snow-Capped Mountain Range Backdrop
-// ----------------------------------------------------------------------------
-const mountainGroup = new THREE.Group();
-const rockTex = GarudaTextureGenerator ? GarudaTextureGenerator.createMountainRockTexture() : null;
-const rockMat = new THREE.MeshStandardMaterial({
-    map: rockTex || null,
-    color: 0x3a424d,
-    roughness: 0.9,
-    metalness: 0.1
-});
-const snowCapMat = new THREE.MeshStandardMaterial({
-    color: 0xf0f6ff,
-    roughness: 0.6,
-    metalness: 0.05
-});
-
-for (let i = 0; i < 32; i++) {
-    const angle = (i * Math.PI * 2) / 32 + (Math.random() - 0.5) * 0.1;
-    const dist = 85 + Math.random() * 110;
-    const mtnHeight = 45 + Math.random() * 65;
-    const mtnRadius = 24 + Math.random() * 32;
-
-    const mtn = new THREE.Group();
-
-    // Mountain Rock Body
-    const mtnGeo = new THREE.ConeGeometry(mtnRadius, mtnHeight, 7);
-    const mtnMesh = new THREE.Mesh(mtnGeo, rockMat);
-    mtnMesh.position.y = mtnHeight / 2 - 4;
-    mtnMesh.castShadow = true;
-    mtnMesh.receiveShadow = true;
-    mtn.add(mtnMesh);
-
-    // Snow Cap Peak
-    const capHeight = mtnHeight * 0.42;
-    const capRadius = mtnRadius * 0.42;
-    const capGeo = new THREE.ConeGeometry(capRadius, capHeight, 7);
-    const capMesh = new THREE.Mesh(capGeo, snowCapMat);
-    capMesh.position.y = mtnHeight - capHeight / 2 - 4;
-    capMesh.castShadow = true;
-    mtn.add(capMesh);
-
-    mtn.position.set(Math.cos(angle) * dist, 0, Math.sin(angle) * dist);
-    mountainGroup.add(mtn);
-}
-scene.add(mountainGroup);
-
-// ----------------------------------------------------------------------------
-// Snow-Covered Coniferous Alpine Pine Trees
-// ----------------------------------------------------------------------------
-const pineTreeGroup = new THREE.Group();
-const pineTrunkGeo = new THREE.CylinderGeometry(0.18, 0.32, 2.8, 8);
-const pineTrunkMat = new THREE.MeshStandardMaterial({ color: 0x3d2817, roughness: 0.9 });
-const pineNeedleMat = new THREE.MeshStandardMaterial({ color: 0x1c3822, roughness: 0.8 });
-const pineSnowMat = new THREE.MeshStandardMaterial({ color: 0xf0f6ff, roughness: 0.5 });
-
-for (let i = 0; i < 36; i++) {
-    const angle = (i * Math.PI * 2) / 36 + (Math.random() - 0.5) * 0.15;
-    const r = 28 + Math.random() * 45;
-    const tree = new THREE.Group();
-
-    // Trunk
-    const trunk = new THREE.Mesh(pineTrunkGeo, pineTrunkMat);
-    trunk.position.y = 1.4;
-    trunk.castShadow = true;
-    tree.add(trunk);
-
-    // 3 Tiered Cones of Pine Needles with Snow Tops
-    for (let t = 0; t < 3; t++) {
-        const coneRadius = 2.4 - t * 0.55;
-        const coneHeight = 2.2;
-        const coneGeo = new THREE.ConeGeometry(coneRadius, coneHeight, 8);
-        const cone = new THREE.Mesh(coneGeo, pineNeedleMat);
-        cone.position.y = 2.6 + t * 1.5;
-        cone.castShadow = true;
-        tree.add(cone);
-
-        // Snow Cap on tier
-        const snowTierGeo = new THREE.ConeGeometry(coneRadius * 0.85, 0.8, 8);
-        const snowTier = new THREE.Mesh(snowTierGeo, pineSnowMat);
-        snowTier.position.y = 2.6 + t * 1.5 + 0.6;
-        tree.add(snowTier);
-    }
-
-    tree.position.set(Math.cos(angle) * r, 0, Math.sin(angle) * r);
-    const scale = 0.75 + Math.random() * 0.5;
-    tree.scale.set(scale, scale, scale);
-    pineTreeGroup.add(tree);
-}
-scene.add(pineTreeGroup);
-
-// ----------------------------------------------------------------------------
-// Tactical Heated Winter Helipads with Black 'H' (LZ-01 through LZ-04)
-// ----------------------------------------------------------------------------
-const padTex = GarudaTextureGenerator ? GarudaTextureGenerator.createLaunchPadTexture() : null;
-const padGeo = new THREE.CircleGeometry(1.65, 64);
-const padMat = new THREE.MeshStandardMaterial({
-    map: padTex ? padTex.diffuse : null,
-    color: 0xffffff,
-    roughness: 0.45,
-    metalness: 0.15,
-    transparent: true,
-    side: THREE.DoubleSide
-});
-
-const padLocations = [
-    { x: 0.0, z: 0.0, name: "LZ-01" },
-    { x: 4.0, z: 0.0, name: "LZ-02" },
-    { x: 0.0, z: 4.0, name: "LZ-03" },
-    { x: 4.0, z: 4.0, name: "LZ-04" }
-];
-
-padLocations.forEach((loc) => {
-    const padMesh = new THREE.Mesh(padGeo, padMat);
-    padMesh.rotation.x = -Math.PI / 2;
-    padMesh.position.set(loc.x, 0.004, loc.z);
-    padMesh.receiveShadow = true;
-    scene.add(padMesh);
-});
+const kargilWorld = new GarudaKargilWorld(scene, camera, renderer);
+window.GarudaWorld = kargilWorld;
 
 // ----------------------------------------------------------------------------
 // Dynamic 3D Falling Snow Particle System
@@ -1615,10 +1498,108 @@ function animate(timestamp) {
 
     if (window.GarudaFlight) {
         window.GarudaFlight.step(dt);
+
+        const gf = window.GarudaFlight;
+        const elev = (window.GarudaWorld && typeof window.GarudaWorld.getGroundHeight === 'function')
+            ? window.GarudaWorld.getGroundHeight(gf.position.x, gf.position.z)
+            : 0.0;
+        const agl = Math.max(0, gf.position.y - elev - gf.groundClearance);
+        const gSpeedKmh = Math.hypot(gf.velocity.x, gf.velocity.z) * 3.6;
+        const distPad = Math.hypot(gf.position.x, gf.position.z);
+
+        // Update Header Badge Status
+        const tickElem = document.getElementById('sim-tick-val');
+        if (tickElem) tickElem.textContent = `TICK: ${gf.simTick} (${gf.simTime.toFixed(2)}s)`;
+
+        const stateBadge = document.getElementById('vehicle-state-badge');
+        if (stateBadge) {
+            stateBadge.textContent = gf.flightMode;
+            if (!gf.armed) {
+                stateBadge.style.color = 'var(--fg-muted)';
+                stateBadge.style.borderColor = 'var(--border-subtle)';
+            } else if (gf.isLanding) {
+                stateBadge.style.color = 'var(--accent-yellow)';
+                stateBadge.style.borderColor = 'var(--accent-yellow)';
+            } else {
+                stateBadge.style.color = 'var(--accent-green)';
+                stateBadge.style.borderColor = 'var(--accent-green)';
+            }
+        }
+
+        // Update Primary Flight Telemetry Card
+        const pfdAlt = document.getElementById('pfd-alt');
+        if (pfdAlt) pfdAlt.textContent = `${agl.toFixed(2)} m`;
+
+        const pfdSpd = document.getElementById('pfd-spd');
+        if (pfdSpd) pfdSpd.textContent = `${gSpeedKmh.toFixed(1)} km/h`;
+
+        const pfdVs = document.getElementById('pfd-vs');
+        if (pfdVs) pfdVs.textContent = `${(gf.velocity.y >= 0 ? '+' : '')}${gf.velocity.y.toFixed(2)} m/s`;
+
+        const pfdRoll = document.getElementById('pfd-roll');
+        if (pfdRoll) pfdRoll.textContent = `${gf.rotationEuler.roll.toFixed(1)}°`;
+
+        const pfdPitch = document.getElementById('pfd-pitch');
+        if (pfdPitch) pfdPitch.textContent = `${gf.rotationEuler.pitch.toFixed(1)}°`;
+
+        const pfdYaw = document.getElementById('pfd-yaw');
+        if (pfdYaw) pfdYaw.textContent = `${gf.rotationEuler.yaw.toFixed(0)}°`;
+
+        const pfdThrust = document.getElementById('pfd-thrust');
+        if (pfdThrust) {
+            const twr = (gf.pilotInputs?.totalThrustN || 0) / (gf.totalMass * gf.gravity);
+            pfdThrust.textContent = `${(gf.pilotInputs?.totalThrustN || 0).toFixed(1)} N (TWR ${twr.toFixed(2)})`;
+        }
+
+        const pfdDist = document.getElementById('pfd-pad-dist');
+        if (pfdDist) pfdDist.textContent = `${distPad.toFixed(2)} m`;
+
+        // Update Live Pilot Diagnostics
+        const dbgThrust = document.getElementById('dbg-thrust');
+        if (dbgThrust) dbgThrust.textContent = `${(gf.pilotInputs?.totalThrustN || 0).toFixed(1)} N`;
+
+        const dbgThr = document.getElementById('dbg-throttle');
+        if (dbgThr) dbgThr.textContent = `${((gf.pilotInputs?.throttleNorm || 0) * 100).toFixed(1)}%`;
+
+        const dbgAy = document.getElementById('dbg-ay');
+        if (dbgAy) dbgAy.textContent = `${(gf.acceleration?.y || 0).toFixed(2)} m/s²`;
+
+        const dbgVy = document.getElementById('dbg-vy');
+        if (dbgVy) dbgVy.textContent = `${(gf.velocity?.y || 0).toFixed(2)} m/s`;
+
+        const dbgRpy = document.getElementById('dbg-rpy');
+        if (dbgRpy) dbgRpy.textContent = `${(gf.rotationEuler?.roll || 0).toFixed(1)}° / ${(gf.rotationEuler?.pitch || 0).toFixed(1)}° / ${(gf.rotationEuler?.yaw || 0).toFixed(1)}°`;
+
+        const dbgGround = document.getElementById('dbg-ground-contact');
+        if (dbgGround) {
+            if (agl <= 0.03) {
+                dbgGround.textContent = distPad < 1.8 ? 'ON HIVE PAD LZ-01 (RESTING)' : 'ON GROUND (RESTING)';
+                dbgGround.style.color = '#39ff14';
+            } else {
+                dbgGround.textContent = `AIRBORNE (${agl.toFixed(2)}m AGL)`;
+                dbgGround.style.color = '#00f0ff';
+            }
+        }
     }
 
-    if (octoModel && octoModel.updateInRenderLoop) {
-        octoModel.updateInRenderLoop(dt);
+    if (window.GarudaWorld && window.GarudaWorld.update) {
+        window.GarudaWorld.update(dt);
+    }
+
+    if (octoModel) {
+        if (!window.GarudaClient || !window.GarudaClient.connected) {
+            // Local physical engine update
+            octoModel.rootGroup.position.set(window.GarudaFlight.position.x, window.GarudaFlight.position.y, window.GarudaFlight.position.z);
+            octoModel.rootGroup.quaternion.set(
+                window.GarudaFlight.quaternion.x,
+                window.GarudaFlight.quaternion.y,
+                window.GarudaFlight.quaternion.z,
+                window.GarudaFlight.quaternion.w
+            );
+        }
+        if (octoModel.updateInRenderLoop) {
+            octoModel.updateInRenderLoop(dt);
+        }
     }
 
     updateSnowfall(dt);

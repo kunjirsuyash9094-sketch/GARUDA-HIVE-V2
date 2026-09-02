@@ -1,0 +1,355 @@
+[gd_scene load_steps=6 format=3 uid="uid://garuda_hive_godot4_main"]
+
+[ext_resource type="Script" path="res://scripts/kargil_simulation_manager.gd" id="1_mgr"]
+[ext_resource type="Script" path="res://scripts/kargil_world_builder.gd" id="2_world"]
+[ext_resource type="Script" path="res://scripts/drone_physics_engine.gd" id="3_drone"]
+[ext_resource type="Script" path="res://scripts/drone_audio_synthesizer.gd" id="4_audio"]
+[ext_resource type="PackedScene" path="res://models/garuda_hl01.glb" id="5_model"]
+
+[node name="KargilSimulationMain" type="Node3D"]
+script = ExtResource("1_mgr")
+
+[node name="KargilWorld" type="Node3D" parent="."]
+script = ExtResource("2_world")
+
+[node name="DroneAudio" type="Node" parent="." node_paths=PackedStringArray("drone")]
+script = ExtResource("4_audio")
+drone = NodePath("../GARUDA_HL01")
+
+[node name="GARUDA_HL01" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.38, 0)
+script = ExtResource("3_drone")
+
+[node name="Model" parent="GARUDA_HL01" instance=ExtResource("5_model")]
+
+[node name="ChaseCamera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.9659, 0.2588, 0, -0.2588, 0.9659, 0, 2.2, 5.0)
+current = true
+fov = 68.0
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="TopBar" type="Panel" parent="HUD"]
+anchor_right = 1.0
+offset_left = 16.0
+offset_top = 12.0
+offset_right = -16.0
+offset_bottom = 60.0
+
+[node name="Logo" type="Label" parent="HUD/TopBar"]
+offset_left = 16.0
+offset_top = 10.0
+offset_right = 320.0
+offset_bottom = 36.0
+theme_override_colors/font_color = Color(0.15, 0.85, 1.0, 1.0)
+text = "GARUDA HIVE OS // FLIGHT CONTROL"
+
+[node name="StatusBadge" type="Label" parent="HUD/TopBar"]
+offset_left = 340.0
+offset_top = 10.0
+offset_right = 540.0
+offset_bottom = 36.0
+text = "[ READY / PRESS W OR SPACE ]"
+
+[node name="BatLabel" type="Label" parent="HUD/TopBar"]
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -460.0
+offset_top = 10.0
+offset_right = -200.0
+offset_bottom = 36.0
+text = "⚡ BATT: 100.0% | 25.20V | 0.6A"
+
+[node name="GpsLabel" type="Label" parent="HUD/TopBar"]
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -180.0
+offset_top = 10.0
+offset_right = -16.0
+offset_bottom = 36.0
+text = "🛰️ 3D FIX (18 SV)"
+
+[node name="LeftPanel" type="Panel" parent="HUD"]
+offset_left = 16.0
+offset_top = 72.0
+offset_right = 340.0
+offset_bottom = 350.0
+
+[node name="Title" type="Label" parent="HUD/LeftPanel"]
+offset_left = 14.0
+offset_top = 10.0
+offset_right = 310.0
+offset_bottom = 34.0
+text = "FLIGHT INSTRUMENTS (PFD)"
+
+[node name="AltBox" type="HBoxContainer" parent="HUD/LeftPanel"]
+offset_left = 14.0
+offset_top = 44.0
+offset_right = 310.0
+offset_bottom = 74.0
+
+[node name="AltVal" type="Label" parent="HUD/LeftPanel/AltBox"]
+offset_right = 160.0
+offset_bottom = 30.0
+theme_override_colors/font_color = Color(0.2, 1.0, 0.4, 1.0)
+theme_override_font_sizes/font_size = 18
+text = "ALT: 0.00 m"
+
+[node name="AltTgt" type="Label" parent="HUD/LeftPanel/AltBox"]
+offset_left = 164.0
+offset_right = 290.0
+offset_bottom = 30.0
+text = "TGT: 2.5 m"
+
+[node name="SpdBox" type="HBoxContainer" parent="HUD/LeftPanel"]
+offset_left = 14.0
+offset_top = 80.0
+offset_right = 310.0
+offset_bottom = 106.0
+
+[node name="SpdVal" type="Label" parent="HUD/LeftPanel/SpdBox"]
+offset_right = 280.0
+offset_bottom = 26.0
+text = "AIRSPEED: 0.0 km/h"
+
+[node name="VsBox" type="HBoxContainer" parent="HUD/LeftPanel"]
+offset_left = 14.0
+offset_top = 112.0
+offset_right = 310.0
+offset_bottom = 138.0
+
+[node name="VsVal" type="Label" parent="HUD/LeftPanel/VsBox"]
+offset_right = 280.0
+offset_bottom = 26.0
+text = "VERTICAL SPEED: +0.00 m/s"
+
+[node name="RpyBox" type="HBoxContainer" parent="HUD/LeftPanel"]
+offset_left = 14.0
+offset_top = 144.0
+offset_right = 310.0
+offset_bottom = 170.0
+
+[node name="RpyVal" type="Label" parent="HUD/LeftPanel/RpyBox"]
+offset_right = 280.0
+offset_bottom = 26.0
+text = "R: +0.0°  P: +0.0°  Y: +0°"
+
+[node name="AltButtons" type="HBoxContainer" parent="HUD/LeftPanel"]
+offset_left = 14.0
+offset_top = 186.0
+offset_right = 310.0
+offset_bottom = 224.0
+
+[node name="BtnClimb" type="Button" parent="HUD/LeftPanel/AltButtons"]
+offset_right = 140.0
+offset_bottom = 38.0
+focus_mode = 0
+text = "▲ CLIMB +1m"
+
+[node name="BtnDescend" type="Button" parent="HUD/LeftPanel/AltButtons"]
+offset_left = 144.0
+offset_right = 284.0
+offset_bottom = 38.0
+focus_mode = 0
+text = "▼ DESCEND -1m"
+
+[node name="RightPanel" type="Panel" parent="HUD"]
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -340.0
+offset_top = 72.0
+offset_right = -16.0
+offset_bottom = 350.0
+
+[node name="Title" type="Label" parent="HUD/RightPanel"]
+offset_left = 14.0
+offset_top = 10.0
+offset_right = 310.0
+offset_bottom = 34.0
+text = "8-ROTOR ESC PROPULSION"
+
+[node name="M1_Lbl" type="Label" parent="HUD/RightPanel"]
+offset_left = 14.0
+offset_top = 38.0
+offset_right = 150.0
+offset_bottom = 58.0
+text = "M1: 0 RPM"
+
+[node name="M1_Bar" type="ProgressBar" parent="HUD/RightPanel"]
+offset_left = 155.0
+offset_top = 40.0
+offset_right = 305.0
+offset_bottom = 56.0
+show_percentage = false
+
+[node name="M2_Lbl" type="Label" parent="HUD/RightPanel"]
+offset_left = 14.0
+offset_top = 64.0
+offset_right = 150.0
+offset_bottom = 84.0
+text = "M2: 0 RPM"
+
+[node name="M2_Bar" type="ProgressBar" parent="HUD/RightPanel"]
+offset_left = 155.0
+offset_top = 66.0
+offset_right = 305.0
+offset_bottom = 82.0
+show_percentage = false
+
+[node name="M3_Lbl" type="Label" parent="HUD/RightPanel"]
+offset_left = 14.0
+offset_top = 90.0
+offset_right = 150.0
+offset_bottom = 110.0
+text = "M3: 0 RPM"
+
+[node name="M3_Bar" type="ProgressBar" parent="HUD/RightPanel"]
+offset_left = 155.0
+offset_top = 92.0
+offset_right = 305.0
+offset_bottom = 108.0
+show_percentage = false
+
+[node name="M4_Lbl" type="Label" parent="HUD/RightPanel"]
+offset_left = 14.0
+offset_top = 116.0
+offset_right = 150.0
+offset_bottom = 136.0
+text = "M4: 0 RPM"
+
+[node name="M4_Bar" type="ProgressBar" parent="HUD/RightPanel"]
+offset_left = 155.0
+offset_top = 118.0
+offset_right = 305.0
+offset_bottom = 134.0
+show_percentage = false
+
+[node name="M5_Lbl" type="Label" parent="HUD/RightPanel"]
+offset_left = 14.0
+offset_top = 142.0
+offset_right = 150.0
+offset_bottom = 162.0
+text = "M5: 0 RPM"
+
+[node name="M5_Bar" type="ProgressBar" parent="HUD/RightPanel"]
+offset_left = 155.0
+offset_top = 144.0
+offset_right = 305.0
+offset_bottom = 160.0
+show_percentage = false
+
+[node name="M6_Lbl" type="Label" parent="HUD/RightPanel"]
+offset_left = 14.0
+offset_top = 168.0
+offset_right = 150.0
+offset_bottom = 188.0
+text = "M6: 0 RPM"
+
+[node name="M6_Bar" type="ProgressBar" parent="HUD/RightPanel"]
+offset_left = 155.0
+offset_top = 170.0
+offset_right = 305.0
+offset_bottom = 186.0
+show_percentage = false
+
+[node name="M7_Lbl" type="Label" parent="HUD/RightPanel"]
+offset_left = 14.0
+offset_top = 194.0
+offset_right = 150.0
+offset_bottom = 214.0
+text = "M7: 0 RPM"
+
+[node name="M7_Bar" type="ProgressBar" parent="HUD/RightPanel"]
+offset_left = 155.0
+offset_top = 196.0
+offset_right = 305.0
+offset_bottom = 212.0
+show_percentage = false
+
+[node name="M8_Lbl" type="Label" parent="HUD/RightPanel"]
+offset_left = 14.0
+offset_top = 220.0
+offset_right = 150.0
+offset_bottom = 240.0
+text = "M8: 0 RPM"
+
+[node name="M8_Bar" type="ProgressBar" parent="HUD/RightPanel"]
+offset_left = 155.0
+offset_top = 222.0
+offset_right = 305.0
+offset_bottom = 238.0
+show_percentage = false
+
+[node name="BottomControls" type="Panel" parent="HUD"]
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = -120.0
+offset_right = -16.0
+offset_bottom = -12.0
+
+[node name="ButtonsRow" type="HBoxContainer" parent="HUD/BottomControls"]
+anchor_right = 1.0
+offset_left = 16.0
+offset_top = 12.0
+offset_right = -16.0
+offset_bottom = 56.0
+theme_override_constants/separation = 12
+
+[node name="BtnArm" type="Button" parent="HUD/BottomControls/ButtonsRow"]
+offset_right = 190.0
+offset_bottom = 44.0
+size_flags_horizontal = 3
+focus_mode = 0
+text = "🚀 ARM / TAKEOFF (Space)"
+
+[node name="BtnHover" type="Button" parent="HUD/BottomControls/ButtonsRow"]
+offset_left = 202.0
+offset_right = 392.0
+offset_bottom = 44.0
+size_flags_horizontal = 3
+focus_mode = 0
+text = "🛸 AUTO-HOVER (H)"
+
+[node name="BtnLand" type="Button" parent="HUD/BottomControls/ButtonsRow"]
+offset_left = 404.0
+offset_right = 594.0
+offset_bottom = 44.0
+size_flags_horizontal = 3
+focus_mode = 0
+text = "🛬 RTL AUTO-LAND (L)"
+
+[node name="BtnCam" type="Button" parent="HUD/BottomControls/ButtonsRow"]
+offset_left = 606.0
+offset_right = 796.0
+offset_bottom = 44.0
+size_flags_horizontal = 3
+focus_mode = 0
+text = "🎥 CHASE CAM (C)"
+
+[node name="BtnReset" type="Button" parent="HUD/BottomControls/ButtonsRow"]
+offset_left = 808.0
+offset_right = 998.0
+offset_bottom = 44.0
+size_flags_horizontal = 3
+focus_mode = 0
+text = "🔄 RESET PAD (R)"
+
+[node name="BtnDisarm" type="Button" parent="HUD/BottomControls/ButtonsRow"]
+offset_left = 1010.0
+offset_right = 1200.0
+offset_bottom = 44.0
+size_flags_horizontal = 3
+focus_mode = 0
+text = "🛑 DISARM (Backspace)"
+
+[node name="Legend" type="Label" parent="HUD/BottomControls"]
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = -32.0
+offset_right = -16.0
+offset_bottom = -8.0
+text = "KEYBOARD CONTROLS: [W/S] Climb/Descend | [Arrow Keys] Pitch/Roll | [A/D] Yaw | [Space] Takeoff | [L] Land | [C] Camera | [R] Reset"

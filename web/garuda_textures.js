@@ -165,6 +165,10 @@
         /**
          * Alpine Mountain Snow & Ice Ground Texture
          */
+        static createAlpineSnowTexture() {
+            return this.createSnowTerrainTexture();
+        }
+
         static createSnowTerrainTexture() {
             const size = 512;
             const canvas = document.createElement('canvas');

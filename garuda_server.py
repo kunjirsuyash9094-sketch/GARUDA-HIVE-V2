@@ -218,11 +218,8 @@ class SimulationRuntimeManager:
         self.drone_ids: List[str] = []
         self.drone_states: dict = {}
 
-        # Initialize Canonical GARUDA-HL-01 Heavy-Lift Fleet
+        # Initialize Canonical Primary Drone GARUDA-HL-01 on Helipad LZ-01
         self.add_drone("GARUDA-HL-01", 0.0, 0.28, 0.0)
-        self.add_drone("GARUDA-HL-02", 4.0, 0.28, 0.0)
-        self.add_drone("GARUDA-HL-03", 0.0, 0.28, 4.0)
-        self.add_drone("GARUDA-HL-04", 4.0, 0.28, 4.0)
 
     def add_drone(self, drone_id: str, x: float, y: float, z: float):
         if drone_id not in self.drone_ids:
@@ -236,9 +233,15 @@ class SimulationRuntimeManager:
 
     def reset(self):
         garuda_lib.garuda_world_reset(self.handle)
+        for did in self.drone_ids:
+            garuda_lib.garuda_drone_reset_failures(self.handle, did.encode('utf-8'))
+            garuda_lib.garuda_drone_disarm(self.handle, did.encode('utf-8'))
         for did, st in self.drone_states.items():
             st["flight_mode"] = "DISARMED"
             st["target_pos"] = [st["home_pos"][0], 3.0 + st["home_pos"][1], st["home_pos"][2]]
+            st["cmd_roll"] = 0.0
+            st["cmd_pitch"] = 0.0
+            st["cmd_thr"] = 0.0
 
     def start_auto_takeoff(self, drone_id: str, target_alt: float = 3.0):
         self.arm(drone_id)
@@ -264,9 +267,17 @@ class SimulationRuntimeManager:
     def set_manual_control(self, drone_id: str, roll: float, pitch: float, yaw_rate: float, throttle: float):
         if drone_id in self.drone_states:
             st = self.drone_states[drone_id]
-            # Check if all inputs are neutral (hover demand)
-            is_neutral = abs(roll) < 0.005 and abs(pitch) < 0.005 and abs(yaw_rate) < 0.005 and (throttle <= 0.0 or abs(throttle - 0.5833) < 0.01)
-            if is_neutral:
+            telem = self.get_telemetry(drone_id)
+            is_grounded = telem and telem["altitude"] <= 0.05
+
+            # If drone is resting on ground and throttle is low, keep resting on ground
+            if is_grounded and throttle <= 0.15:
+                st["flight_mode"] = "ARMED_GROUND"
+                self.set_control(drone_id, 0.0, 0.0, 0.0, 0.0)
+                return
+
+            is_neutral = abs(roll) < 0.005 and abs(pitch) < 0.005 and abs(yaw_rate) < 0.005 and (abs(throttle - 0.5833) < 0.02)
+            if is_neutral and not is_grounded:
                 if st["flight_mode"] == "MANUAL":
                     self.set_hover(drone_id)
                 return
@@ -293,15 +304,20 @@ class SimulationRuntimeManager:
 
                     target_x, target_y, target_z = st["target_pos"]
 
-                    # 1. Steady Controlled Descent for AUTO_LAND
+                    # 1. Two-Phase Precision RTH & Controlled Descent for AUTO_LAND
                     if mode == "AUTO_LAND":
-                        target_y -= 0.65 * self.dt
-                        if target_y < st["home_pos"][1]:
-                            target_y = st["home_pos"][1]
-                        st["target_pos"][1] = target_y
+                        dist_pad = ((cur_x - st["home_pos"][0])**2 + (cur_z - st["home_pos"][2])**2)**0.5
+                        if dist_pad > 0.25:
+                            # Phase 1: Transit home at safe altitude (maintain >= 2.5m AGL)
+                            target_y = max(2.5 + st["home_pos"][1], target_y)
+                            st["target_pos"][1] = target_y
+                        else:
+                            # Phase 2: Centered over pad -> smooth vertical descent
+                            target_y = max(st["home_pos"][1], target_y - 0.55 * self.dt)
+                            st["target_pos"][1] = target_y
 
                         # Touchdown detection on pad
-                        if cur_alt <= 0.02 and abs(cur_vy) < 0.15 and cur_y <= (st["home_pos"][1] + 0.03):
+                        if cur_alt <= 0.03 and abs(cur_vy) < 0.20 and cur_y <= (st["home_pos"][1] + 0.04):
                             self.disarm(did)
                             st["flight_mode"] = "DISARMED"
                             continue
@@ -315,17 +331,22 @@ class SimulationRuntimeManager:
                     # Horizontal Position Hold (Eliminate all drift from wind/unbalanced forces)
                     ex = target_x - cur_x
                     ez = target_z - cur_z
-                    des_vx = max(-1.5, min(1.5, ex * 1.8))
-                    des_vz = max(-1.5, min(1.5, ez * 1.8))
+                    des_vx = max(-1.5, min(1.5, ex * 1.6))
+                    des_vz = max(-1.5, min(1.5, ez * 1.6))
 
                     vx_err = des_vx - cur_vx
                     vz_err = des_vz - cur_vz
 
                     # In FRD Body Frame: +Roll -> +X, +Pitch -> -Z (forward)
-                    roll_cmd = max(-0.15, min(0.15, vx_err * 0.08))
-                    pitch_cmd = max(-0.15, min(0.15, -vz_err * 0.08))
+                    target_roll = max(-0.15, min(0.15, vx_err * 0.07))
+                    target_pitch = max(-0.15, min(0.15, -vz_err * 0.07))
 
-                    self.set_control(did, roll_cmd, pitch_cmd, 0.0, thr)
+                    # Smooth exponential moving average setpoint filter (prevents motor twitch/vibration)
+                    st["cmd_roll"] = st.get("cmd_roll", 0.0) + 0.12 * (target_roll - st.get("cmd_roll", 0.0))
+                    st["cmd_pitch"] = st.get("cmd_pitch", 0.0) + 0.12 * (target_pitch - st.get("cmd_pitch", 0.0))
+                    st["cmd_thr"] = st.get("cmd_thr", thr) + 0.15 * (thr - st.get("cmd_thr", thr))
+
+                    self.set_control(did, st["cmd_roll"], st["cmd_pitch"], 0.0, st["cmd_thr"])
 
                     if mode == "AUTO_TAKEOFF" and abs(alt_err) < 0.10 and abs(cur_vy) < 0.2:
                         st["flight_mode"] = "POS_HOLD"
@@ -395,13 +416,13 @@ class SimulationRuntimeManager:
             "drone_id": pod.drone_id.decode('utf-8', errors='ignore'),
             "tick": pod.tick,
             "time_s": round(pod.time_s, 4),
-            "position": {"x": round(pod.pos_x, 4), "y": round(pod.pos_y, 4), "z": round(pod.pos_z, 4)},
-            "velocity": {"x": round(pod.vel_x, 4), "y": round(pod.vel_y, 4), "z": round(pod.vel_z, 4)},
-            "acceleration": {"x": round(pod.acc_x, 4), "y": round(pod.acc_y, 4), "z": round(pod.acc_z, 4)},
+            "position": {"x": pod.pos_x, "y": pod.pos_y, "z": pod.pos_z},
+            "velocity": {"x": pod.vel_x, "y": pod.vel_y, "z": pod.vel_z},
+            "acceleration": {"x": pod.acc_x, "y": pod.acc_y, "z": pod.acc_z},
             "altitude": round(pod.altitude, 4),
             "ground_speed": round(pod.ground_speed, 4),
             "vertical_speed": round(pod.vertical_speed, 4),
-            "orientation": {"x": round(pod.quat_x, 4), "y": round(pod.quat_y, 4), "z": round(pod.quat_z, 4), "w": round(pod.quat_w, 4)},
+            "orientation": {"x": pod.quat_x, "y": pod.quat_y, "z": pod.quat_z, "w": pod.quat_w},
             "rpy_deg": {"roll": round(pod.roll_deg, 2), "pitch": round(pod.pitch_deg, 2), "yaw": round(pod.yaw_deg, 2)},
             "angular_velocity": {"x": round(pod.gyro_x, 4), "y": round(pod.gyro_y, 4), "z": round(pod.gyro_z, 4)},
             "total_thrust": round(pod.total_thrust, 2),

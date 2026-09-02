@@ -4,8 +4,8 @@
 
 extends Control
 
-@export var sitl_manager: SITLManager
-@export var drone: DroneBody
+@export var sitl_manager: Node
+@export var drone: Node
 
 @onready var _panel: RichTextLabel = $RichTextLabel
 

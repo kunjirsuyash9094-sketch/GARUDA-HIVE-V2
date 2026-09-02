@@ -47,22 +47,29 @@
                 this.masterGain.gain.value = this.muted ? 0.0 : this.masterVolume;
                 this.masterGain.connect(this.ctx.destination);
 
-                // Motor Whine Sub-Gain
+                // Motor Whine Sub-Gain & Low-Pass Warmth Filter
                 this.motorGain = this.ctx.createGain();
                 this.motorGain.gain.value = 0.0;
-                this.motorGain.connect(this.masterGain);
+
+                this.motorLowPass = this.ctx.createBiquadFilter();
+                this.motorLowPass.type = 'lowpass';
+                this.motorLowPass.frequency.setValueAtTime(950, this.ctx.currentTime);
+                this.motorLowPass.Q.setValueAtTime(1.0, this.ctx.currentTime);
+
+                this.motorGain.connect(this.motorLowPass);
+                this.motorLowPass.connect(this.masterGain);
 
                 // Blade Prop-Wash Turbulence (Filtered Pink Noise)
                 this.createNoiseGenerator();
 
-                // Multi-harmonic BLDC Motor Oscillators (Fundamental + 2nd + 3rd harmonics + ESC switching ripple)
-                const harmonicMultipliers = [1.0, 2.0, 3.0, 4.0, 8.0];
-                const harmonicGains = [0.25, 0.18, 0.10, 0.06, 0.03];
+                // Multi-harmonic BLDC Motor Oscillators (Deep low-frequency stator hum & turbine resonance)
+                const harmonicMultipliers = [1.0, 2.0, 3.0, 4.0];
+                const harmonicGains = [0.14, 0.07, 0.03, 0.015];
 
                 for (let i = 0; i < harmonicMultipliers.length; i++) {
                     const osc = this.ctx.createOscillator();
-                    osc.type = (i % 2 === 0) ? 'sawtooth' : 'triangle';
-                    osc.frequency.setValueAtTime(80 * harmonicMultipliers[i], this.ctx.currentTime);
+                    osc.type = (i === 0) ? 'sine' : 'triangle';
+                    osc.frequency.setValueAtTime(60 * harmonicMultipliers[i], this.ctx.currentTime);
 
                     const g = this.ctx.createGain();
                     g.gain.setValueAtTime(harmonicGains[i], this.ctx.currentTime);
@@ -146,8 +153,8 @@
                 return;
             }
 
-            // Blade Pass Frequency: (RPM / 60) * 2 blades * 8 rotors * scaling
-            const bpf = Math.max(35, (avgRpm / 60.0) * 2.0 * 2.2);
+            // Blade Pass Frequency: (RPM / 60) * 2 blades * realistic acoustic resonance
+            const bpf = Math.max(28, (avgRpm / 60.0) * 2.0 * 1.25);
 
             // Update harmonic oscillator frequencies
             for (let i = 0; i < this.motorOscs.length; i++) {
@@ -155,17 +162,17 @@
                 this.motorOscs[i].osc.frequency.setTargetAtTime(targetFreq, t, 0.04);
             }
 
-            // Motor Whine volume based on RPM
-            const rpmNorm = Math.min(1.0, avgRpm / 4800.0);
-            const motorVol = Math.pow(rpmNorm, 1.4) * 0.45;
+            // Motor hum volume based on RPM
+            const rpmNorm = Math.min(1.0, avgRpm / 5200.0);
+            const motorVol = Math.pow(rpmNorm, 1.3) * 0.32;
             this.motorGain.gain.setTargetAtTime(motorVol, t, 0.05);
 
             // Prop wash noise filter frequency & gain
             if (this.noiseFilter && this.propWashGain) {
-                const filterFreq = 180 + rpmNorm * 900 + thrustRatio * 400;
+                const filterFreq = 140 + rpmNorm * 650 + thrustRatio * 300;
                 this.noiseFilter.frequency.setTargetAtTime(filterFreq, t, 0.05);
 
-                const washVol = Math.pow(rpmNorm, 1.6) * 0.35 + thrustRatio * 0.15;
+                const washVol = Math.pow(rpmNorm, 1.4) * 0.30 + thrustRatio * 0.12;
                 this.propWashGain.gain.setTargetAtTime(washVol, t, 0.05);
             }
         }

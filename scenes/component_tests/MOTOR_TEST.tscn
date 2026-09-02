@@ -1,0 +1,168 @@
+[gd_scene load_steps=6 format=3 uid="uid://f3g3yvq0x6x6"]
+
+[ext_resource type="PackedScene" path="res://models/GARUDA_HL_01/03_MOTORS/MOTOR_MASTER.glb" id="1_motor"]
+[ext_resource type="Script" path="res://scripts/inspection_orbit_camera.gd" id="2_cam"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_1"]
+sky_top_color = Color(0.28, 0.35, 0.45, 1)
+sky_horizon_color = Color(0.55, 0.62, 0.7, 1)
+ground_bottom_color = Color(0.12, 0.14, 0.16, 1)
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("ProceduralSkyMaterial_1")
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 2
+sky = SubResource("Sky_1")
+tonemap_mode = 3
+glow_enabled = true
+
+[node name="MOTOR_TEST" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.707107, -0.5, 0.5, 0, 0.707107, 0.707107, -0.707107, -0.5, 0.5, 0, 3, 0)
+light_energy = 1.3
+shadow_enabled = true
+
+[node name="DirectionalLight3D_Fill" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.707107, 0.5, -0.5, 0, 0.707107, 0.707107, 0.707107, 0.5, -0.5, 0, -2, 0)
+light_energy = 0.5
+
+[node name="MOTOR_MASTER" parent="." instance=ExtResource("1_motor")]
+
+[node name="CameraPivot" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.025, 0)
+script = ExtResource("2_cam")
+target_component_name = "MOTOR_MASTER"
+default_distance = 0.25
+min_distance = 0.05
+max_distance = 1.0
+
+[node name="Camera3D" type="Camera3D" parent="CameraPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.25)
+current = true
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="Panel" type="Panel" parent="UI"]
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 320.0
+offset_bottom = 360.0
+
+[node name="Title" type="Label" parent="UI/Panel"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 10.0
+offset_right = 285.0
+offset_bottom = 35.0
+text = "MOTOR_MASTER INSPECTION (03)"
+horizontal_alignment = 1
+
+[node name="Info" type="Label" parent="UI/Panel"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 40.0
+offset_right = 285.0
+offset_bottom = 125.0
+text = "Authoritative C++ Specifications:
+Model: 6215 Brushless Motor
+Housing Radius: 34.0 mm | Height: 40.0 mm
+Cooling: 12x CNC Anodized Red Vanes
+Shaft Datum: Y = +0.058 m (Rotor Seat)"
+theme_override_font_sizes/font_size = 12
+
+[node name="BtnFront" type="Button" parent="UI/Panel"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 135.0
+offset_right = 95.0
+offset_bottom = 165.0
+text = "FRONT"
+
+[node name="BtnRear" type="Button" parent="UI/Panel"]
+layout_mode = 0
+offset_left = 110.0
+offset_top = 135.0
+offset_right = 190.0
+offset_bottom = 165.0
+text = "REAR"
+
+[node name="BtnTop" type="Button" parent="UI/Panel"]
+layout_mode = 0
+offset_left = 205.0
+offset_top = 135.0
+offset_right = 285.0
+offset_bottom = 165.0
+text = "TOP"
+
+[node name="BtnLeft" type="Button" parent="UI/Panel"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 175.0
+offset_right = 95.0
+offset_bottom = 205.0
+text = "LEFT"
+
+[node name="BtnRight" type="Button" parent="UI/Panel"]
+layout_mode = 0
+offset_left = 110.0
+offset_top = 175.0
+offset_right = 190.0
+offset_bottom = 205.0
+text = "RIGHT"
+
+[node name="BtnBottom" type="Button" parent="UI/Panel"]
+layout_mode = 0
+offset_left = 205.0
+offset_top = 175.0
+offset_right = 285.0
+offset_bottom = 205.0
+text = "BOTTOM"
+
+[node name="Btn45Front" type="Button" parent="UI/Panel"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 220.0
+offset_right = 140.0
+offset_bottom = 250.0
+text = "45° FRONT"
+
+[node name="Btn45Rear" type="Button" parent="UI/Panel"]
+layout_mode = 0
+offset_left = 160.0
+offset_top = 220.0
+offset_right = 285.0
+offset_bottom = 250.0
+text = "45° REAR"
+
+[node name="BtnReset" type="Button" parent="UI/Panel"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 270.0
+offset_right = 285.0
+offset_bottom = 305.0
+text = "🎯 RESET FOCUS ('F')"
+
+[node name="Controls" type="Label" parent="UI/Panel"]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 315.0
+offset_right = 285.0
+offset_bottom = 335.0
+text = "LMB: Orbit | RMB/MMB: Pan | Wheel: Zoom"
+theme_override_font_sizes/font_size = 11
+horizontal_alignment = 1
+
+[connection signal="pressed" from="UI/Panel/BtnFront" to="CameraPivot" method="set_preset" binds= ["FRONT"]]
+[connection signal="pressed" from="UI/Panel/BtnRear" to="CameraPivot" method="set_preset" binds= ["REAR"]]
+[connection signal="pressed" from="UI/Panel/BtnTop" to="CameraPivot" method="set_preset" binds= ["TOP"]]
+[connection signal="pressed" from="UI/Panel/BtnLeft" to="CameraPivot" method="set_preset" binds= ["LEFT"]]
+[connection signal="pressed" from="UI/Panel/BtnRight" to="CameraPivot" method="set_preset" binds= ["RIGHT"]]
+[connection signal="pressed" from="UI/Panel/BtnBottom" to="CameraPivot" method="set_preset" binds= ["BOTTOM"]]
+[connection signal="pressed" from="UI/Panel/Btn45Front" to="CameraPivot" method="set_preset" binds= ["45_FRONT"]]
+[connection signal="pressed" from="UI/Panel/Btn45Rear" to="CameraPivot" method="set_preset" binds= ["45_REAR"]]
+[connection signal="pressed" from="UI/Panel/BtnReset" to="CameraPivot" method="reset_focus"]

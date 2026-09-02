@@ -5,7 +5,7 @@
 
 extends Node
 
-@export var drone: DroneBody
+@export var drone: Node
 @export var hud_label: RichTextLabel
 @export var drone_path: NodePath
 @export var hud_path: NodePath

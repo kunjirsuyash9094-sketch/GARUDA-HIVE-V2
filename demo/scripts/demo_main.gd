@@ -4,8 +4,8 @@
 ## from the console while an external probe drives the bridge.
 extends Node3D
 
-@onready var drone: DroneBody = $DroneBody
-@onready var sitl: SITLManager = $DroneBody/SITLManager
+@onready var drone: Node = $DroneBody
+@onready var sitl: Node = $DroneBody/SITLManager
 
 const RUN_SECONDS := 20.0
 const PRINT_INTERVAL := 0.5

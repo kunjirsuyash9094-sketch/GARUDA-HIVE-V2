@@ -405,6 +405,9 @@ class GarudaOctocopterModel {
             blurMesh.position.y = 0.005;
             rotorHead.add(blurMesh);
 
+            this.props.push(rotorHead);
+            this.propBlurs.push(blurMat);
+
             armGroup.add(rotorHead);
 
             // Navigation Strobe LED (Alternating Cyan / Crimson)

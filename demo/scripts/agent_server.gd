@@ -10,8 +10,8 @@
 
 extends Node
 
-@export var drone: DroneBody
-@export var perception: DronePerception    # optional; adds depth/RGB to obs
+@export var drone: Node
+@export var perception: Node               # optional; adds depth/RGB to obs
 @export var drone_path: NodePath           # robust wiring for hand-authored scenes
 @export var perception_path: NodePath
 @export var port: int = 5557
@@ -193,12 +193,12 @@ func _apply_action(cmd: Dictionary) -> void:
 func _send_obs() -> void:
 	_t += 1.0 / float(physics_hz)
 	_step += 1
-	var b := drone.global_transform.basis
-	var q := b.get_rotation_quaternion()
-	var e := b.get_euler()          # radians (YXZ)
-	var p := drone.global_position
-	var oob := (absf(p.x) > bounds or absf(p.z) > bounds or p.y > bounds or p.y < -1.0)
-	var colliding := false
+	var b: Basis = drone.global_transform.basis
+	var q: Quaternion = b.get_rotation_quaternion()
+	var e: Vector3 = b.get_euler()          # radians (YXZ)
+	var p: Vector3 = drone.global_position
+	var oob: bool = (absf(p.x) > bounds or absf(p.z) > bounds or p.y > bounds or p.y < -1.0)
+	var colliding: bool = false
 	if drone.has_method("get_colliding_bodies"):
 		colliding = drone.get_colliding_bodies().size() > 0
 

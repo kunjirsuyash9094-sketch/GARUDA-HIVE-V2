@@ -9,7 +9,7 @@
 
 extends Control
 
-@export var drone: DroneBody
+@export var drone: Node
 
 # ---- Layout config ---------------------------------------------------------
 @export var cell_bar_width:  int = 18
